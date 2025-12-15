@@ -189,6 +189,104 @@ export default function FlightLogs() {
     setIsExporting(false);
   };
 
+  const handleExportRBE = () => {
+    setIsExporting(true);
+    
+    // Função auxiliar para obter último arrival_time preenchido
+    const getLastArrivalTime = (log) => {
+      for (let i = 6; i >= 1; i--) {
+        const arrivalTime = log[`arrival_time_${i}`];
+        if (arrivalTime) return arrivalTime;
+      }
+      return '';
+    };
+    
+    // Função auxiliar para obter último destination preenchido
+    const getLastDestination = (log) => {
+      for (let i = 6; i >= 1; i--) {
+        const destination = log[`destination_${i}`];
+        if (destination) return destination;
+      }
+      return '';
+    };
+    
+    // Função auxiliar para combinar Pax e victims
+    const getPassengers = (log) => {
+      let passengers = log.pax || '';
+      if (log.victims && Array.isArray(log.victims) && log.victims.length > 0) {
+        const victimNames = log.victims.map(v => v.name).filter(Boolean).join('; ');
+        if (victimNames) {
+          passengers = passengers ? `${passengers}; ${victimNames}` : victimNames;
+        }
+      }
+      return passengers;
+    };
+    
+    // Cabeçalhos CSV para RBE
+    const headers = [
+      'Id', 'Datainicio', 'Base', 'Aeronave', 'Naturezapm', 'Naturezabm', 
+      'Atividadesaereas', 'Comandanteaeronave', 'Ordemdecolagem', 'Copiloto', 
+      'Tom1', 'Tom2', 'Apoiosolo', 'Passageiro', 'Horainicio', 'Dataencerramento', 
+      'Horaencerramento', 'Motivovoo', 'Tempovoo', 'Abastecimentolitros', 
+      'Horaforasolo', 'Decolagem', 'Horalocalocorrencia', 'Horahospital', 
+      'Destino', 'Pousofinal', 'Localocorrencia', 'Bairro', 'Cidade', 
+      'Numerobou', 'Descricaoinicial', 'Operacoesaereasespeciais', 'Descricaoservicoprestado'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...filteredLogs.map(log => {
+        const row = [
+          '', // Id - em branco
+          log.date || '', // Datainicio
+          log.base || '', // Base
+          log.aircraft || '', // Aeronave
+          log.mission_type_pm || '', // Naturezapm
+          log.mission_type || '', // Naturezabm
+          '', // Atividadesaereas - em branco
+          log.pilot_in_command || '', // Comandanteaeronave
+          '', // Ordemdecolagem - em branco
+          log.copilot || '', // Copiloto
+          log.oat_1 || '', // Tom1
+          log.oat_2 || '', // Tom2
+          '', // Apoiosolo - em branco
+          getPassengers(log), // Passageiro
+          log.departure_time_1 || '', // Horainicio
+          log.date || '', // Dataencerramento
+          getLastArrivalTime(log), // Horaencerramento
+          '', // Motivovoo - em branco
+          log.flight_duration || '', // Tempovoo
+          '', // Abastecimentolitros - em branco
+          log.departure_time_1 || '', // Horaforasolo
+          log.origin_1 || '', // Decolagem
+          '', // Horalocalocorrencia - em branco
+          '', // Horahospital - em branco
+          log.destination || '', // Destino
+          getLastDestination(log), // Pousofinal
+          log.destination_1 || '', // Localocorrencia
+          '', // Bairro - em branco
+          '', // Cidade - em branco
+          log.sade_occurrence_number || '', // Numerobou
+          '', // Descricaoinicial - em branco
+          (log.heli_operations && Array.isArray(log.heli_operations)) ? log.heli_operations.join('; ') : '', // Operacoesaereasespeciais
+          log.remarks || '' // Descricaoservicoprestado
+        ];
+        
+        return row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `registros_rbe_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsExporting(false);
+  };
+
   const handleImportClick = () => {
     fileInputRef.current.click();
   };
@@ -349,6 +447,14 @@ export default function FlightLogs() {
                 >
                   <Download className="w-4 h-4 mr-2" />
                   {isExporting ? "Exportando..." : `Exportar Filtrados (${filteredLogs.length})`}
+                </Button>
+                <Button
+                  onClick={handleExportRBE}
+                  disabled={isExporting || filteredLogs.length === 0}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {isExporting ? "Exportando..." : `Exportar CSV para RBE`}
                 </Button>
               </>
             )}
