@@ -192,6 +192,15 @@ export default function FlightLogs() {
   const handleExportRBE = () => {
     setIsExporting(true);
     
+    // Função para converter hora UTC para Brasília (UTC-3)
+    const convertUTCtoBrasilia = (timeUTC) => {
+      if (!timeUTC) return '';
+      const [hours, minutes] = timeUTC.split(':').map(Number);
+      let brasiliaHours = hours - 3;
+      if (brasiliaHours < 0) brasiliaHours += 24;
+      return `${String(brasiliaHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+    
     // Função auxiliar para obter último arrival_time preenchido
     const getLastArrivalTime = (log) => {
       for (let i = 6; i >= 1; i--) {
@@ -251,13 +260,13 @@ export default function FlightLogs() {
           log.oat_2 || '', // Tom2
           '', // Apoiosolo - em branco
           getPassengers(log), // Passageiro
-          log.departure_time_1 || '', // Horainicio
+          convertUTCtoBrasilia(log.departure_time_1 || ''), // Horainicio
           log.date || '', // Dataencerramento
-          getLastArrivalTime(log), // Horaencerramento
+          convertUTCtoBrasilia(getLastArrivalTime(log)), // Horaencerramento
           '', // Motivovoo - em branco
           log.flight_duration || '', // Tempovoo
           '', // Abastecimentolitros - em branco
-          log.departure_time_1 || '', // Horaforasolo
+          convertUTCtoBrasilia(log.departure_time_1 || ''), // Horaforasolo
           log.origin_1 || '', // Decolagem
           '', // Horalocalocorrencia - em branco
           '', // Horahospital - em branco
