@@ -43,6 +43,7 @@ function getAgeRange(age) {
 
 export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
     const [data, setData] = useState({
+        data: new Date().toISOString().split('T')[0],
         ocorrencia_samu: '',
         tipo_transporte: '',
         status_transporte: '',
@@ -63,7 +64,10 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
         transfusao_bolsas: '',
         pressao_arterial_sistolica: '',
         frequencia_cardiaca: '',
-        indice_choque: null
+        indice_choque: null,
+        compressor_toracico: '',
+        ultrassom_portatil: '',
+        babypod: ''
     });
     const [validationErrors, setValidationErrors] = useState({});
     const [isUploadingFrente, setIsUploadingFrente] = useState(false);
@@ -102,6 +106,7 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
         const errors = {};
 
         // Validações obrigatórias
+        if (!data.data) errors.data = "Data é obrigatória";
         if (!data.nome_paciente) errors.nome_paciente = "Nome do paciente é obrigatório";
         if (!data.compressor_toracico) errors.compressor_toracico = "Compressor Torácico é obrigatório";
         if (!data.ultrassom_portatil) errors.ultrassom_portatil = "Ultrassom Portátil é obrigatório";
@@ -211,15 +216,26 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
             )}
 
             <FormSection title="Dados Administrativos">
-                <p className="text-xs text-slate-500 mb-4">
-                    Data e Base serão preenchidas pelo Piloto/OAT ao registrar a missão.
-                </p>
                 <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <Label htmlFor="data">Data do Atendimento <span className="text-red-500">*</span></Label>
+                        <Input 
+                            id="data"
+                            type="date"
+                            value={data.data} 
+                            onChange={e => handleChange('data', e.target.value)}
+                            className={validationErrors.data ? 'border-red-500' : ''}
+                        />
+                        {validationErrors.data && <p className="text-xs text-red-500 mt-1">{validationErrors.data}</p>}
+                    </div>
                     <div>
                         <Label htmlFor="ocorrencia_samu">Nº Ocorrência SAMU</Label>
                         <Input id="ocorrencia_samu" value={data.ocorrencia_samu} onChange={e => handleChange('ocorrencia_samu', e.target.value)} />
                     </div>
                 </div>
+                <p className="text-xs text-slate-500 mt-2">
+                    Base será preenchida pelo Piloto/OAT ao registrar a missão.
+                </p>
             </FormSection>
 
             <FormSection title="Dados do Transporte">
