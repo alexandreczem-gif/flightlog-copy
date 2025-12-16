@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FlightLog } from "@/entities/all";
 import { VictimRecord } from "@/entities/VictimRecord"; // Import VictimRecord entity
 import { User } from "@/entities/User"; // Import User entity
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download } from "lucide-react";
@@ -189,8 +190,29 @@ export default function FlightLogs() {
     setIsExporting(false);
   };
 
-  const handleExportRBE = () => {
+  const handleExportRBE = async () => {
     setIsExporting(true);
+    
+    // Buscar tripulantes para mapear nomes para trigramas
+    let nameToTrigramaMap = {};
+    try {
+      const tripulantes = await base44.entities.Tripulante.list();
+      nameToTrigramaMap = tripulantes.reduce((acc, t) => {
+        if (t.nome_de_guerra && t.trigrama) {
+          acc[t.nome_de_guerra.toLowerCase()] = t.trigrama;
+        }
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error("Erro ao buscar tripulantes:", error);
+    }
+    
+    // Função para converter nome em trigrama
+    const getTrigramaOrName = (name) => {
+      if (!name) return '';
+      const trigrama = nameToTrigramaMap[name.toLowerCase()];
+      return trigrama || name;
+    };
     
     // Função para converter hora UTC para Brasília (UTC-3)
     const convertUTCtoBrasilia = (timeUTC) => {
@@ -253,11 +275,11 @@ export default function FlightLogs() {
           log.mission_type_pm || '', // Naturezapm
           log.mission_type || '', // Naturezabm
           '', // Atividadesaereas - em branco
-          log.pilot_in_command || '', // Comandanteaeronave
+          getTrigramaOrName(log.pilot_in_command || ''), // Comandanteaeronave
           '', // Ordemdecolagem - em branco
-          log.copilot || '', // Copiloto
-          log.oat_1 || '', // Tom1
-          log.oat_2 || '', // Tom2
+          getTrigramaOrName(log.copilot || ''), // Copiloto
+          getTrigramaOrName(log.oat_1 || ''), // Tom1
+          getTrigramaOrName(log.oat_2 || ''), // Tom2
           '', // Apoiosolo - em branco
           getPassengers(log), // Passageiro
           convertUTCtoBrasilia(log.departure_time_1 || ''), // Horainicio
