@@ -199,7 +199,8 @@ export default function Dashboard() {
     };
   };
 
-  const totalStats = calculateStats(logs, false);
+  const arcanjo01Logs = logs.filter(log => log.aircraft === 'Arcanjo 01');
+  const totalStats = calculateStats(arcanjo01Logs, false);
   const operationStats = operationStartDate ? calculateStats(operationLogs, true) : null;
 
   if (error) {
@@ -365,7 +366,7 @@ export default function Dashboard() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2">
             <div className="h-1 w-8 bg-red-600 rounded"></div>
-            Dados Totais
+            Dados Totais - Arcanjo 01
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatsCard 
