@@ -276,7 +276,7 @@ export default function FlightLogs() {
           log.mission_type || '', // Naturezabm
           '', // Atividadesaereas - em branco
           getTrigramaOrName(log.pilot_in_command || ''), // Comandanteaeronave
-          '', // Ordemdecolagem - em branco
+          'Acionamento', // Ordemdecolagem
           getTrigramaOrName(log.copilot || ''), // Copiloto
           getTrigramaOrName(log.oat_1 || ''), // Tom1
           getTrigramaOrName(log.oat_2 || ''), // Tom2
@@ -285,20 +285,20 @@ export default function FlightLogs() {
           convertUTCtoBrasilia(log.departure_time_1 || ''), // Horainicio
           log.date || '', // Dataencerramento
           convertUTCtoBrasilia(getLastArrivalTime(log)), // Horaencerramento
-          '', // Motivovoo - em branco
+          'Operacao Verão', // Motivovoo
           log.flight_duration || '', // Tempovoo
-          '', // Abastecimentolitros - em branco
+          '0', // Abastecimentolitros
           convertUTCtoBrasilia(log.departure_time_1 || ''), // Horaforasolo
           log.origin_1 || '', // Decolagem
-          '', // Horalocalocorrencia - em branco
-          '', // Horahospital - em branco
+          convertUTCtoBrasilia(log.arrival_time_1 || ''), // Horalocalocorrencia
+          log.arrival_time_2 ? convertUTCtoBrasilia(log.arrival_time_2) : '00:00', // Horahospital
           log.destination || '', // Destino
           getLastDestination(log), // Pousofinal
           log.destination_1 || '', // Localocorrencia
           '', // Bairro - em branco
-          '', // Cidade - em branco
+          'Curitiba/PR', // Cidade
           log.sade_occurrence_number || '', // Numerobou
-          '', // Descricaoinicial - em branco
+          log.remarks || '', // Descricaoinicial
           (log.heli_operations && Array.isArray(log.heli_operations)) ? log.heli_operations.join('; ') : '', // Operacoesaereasespeciais
           log.remarks || '' // Descricaoservicoprestado
         ];
