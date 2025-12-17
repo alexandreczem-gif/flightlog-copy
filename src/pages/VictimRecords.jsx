@@ -277,7 +277,7 @@ export default function VictimRecords() {
         try {
             // Exportar apenas os registros filtrados
             const recordsToExport = filteredRecords;
-            let headers = Object.keys(VictimRecord.schema().properties);
+            let headers = recordsToExport.length > 0 ? Object.keys(recordsToExport[0]) : [];
             
             // Mover grau_afogamento para o final
             headers = headers.filter(h => h !== 'grau_afogamento');
