@@ -87,6 +87,7 @@ export default function FlightLogs() {
       if (filters.mission_id && !String(log.mission_id).includes(filters.mission_id)) return false;
       if (filters.sade_occurrence && (!log.sade_occurrence_number || !log.sade_occurrence_number.toLowerCase().includes(filters.sade_occurrence.toLowerCase()))) return false;
       if (filters.aircraft && log.aircraft !== filters.aircraft) return false;
+      if (filters.municipality && (!log.municipality || !log.municipality.toLowerCase().includes(filters.municipality.toLowerCase()))) return false;
       if (filters.mission_type && log.mission_type !== filters.mission_type) return false;
       
       // Crew filters
@@ -296,7 +297,7 @@ export default function FlightLogs() {
           getLastDestination(log), // Pousofinal
           log.destination_1 || '', // Localocorrencia
           '', // Bairro - em branco
-          'Curitiba/PR', // Cidade
+          log.municipality || 'Curitiba/PR', // Cidade
           log.sade_occurrence_number || '', // Numerobou
           log.remarks || '', // Descricaoinicial
           (log.heli_operations && Array.isArray(log.heli_operations)) ? log.heli_operations.join('; ') : '', // Operacoesaereasespeciais

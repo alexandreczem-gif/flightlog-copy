@@ -485,6 +485,28 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
       return;
     }
 
+    // Validar campos obrigatórios quando missão não está em escala regular
+    if (!missionInOperation) {
+      // Validar coordenadas de todas as etapas
+      for (let i = 0; i < stages.length; i++) {
+        const stage = stages[i];
+        if (!stage.origin_lat || !stage.origin_lon) {
+          alert(`Por favor, preencha as coordenadas de origem da etapa ${i + 1}.`);
+          return;
+        }
+        if (!stage.destination_lat || !stage.destination_lon) {
+          alert(`Por favor, preencha as coordenadas de destino da etapa ${i + 1}.`);
+          return;
+        }
+      }
+
+      // Validar observações
+      if (!formData.remarks || formData.remarks.trim() === '') {
+        alert("Por favor, preencha o campo de Observações.");
+        return;
+      }
+    }
+
     // Validate stage durations
     for (let i = 0; i < stages.length; i++) {
       const stage = stages[i];
@@ -632,7 +654,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
             </div>
             <div>
               <Label htmlFor="base">Base</Label>
-              {availableBases.length > 0 ? (
+              {missionInOperation && availableBases.length > 0 ? (
                 <Select value={formData.base} onValueChange={(v) => handleChange('base', v)}>
                   <SelectTrigger id="base">
                     <SelectValue placeholder="Selecione..." />
@@ -644,7 +666,20 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                   </SelectContent>
                 </Select>
               ) : (
-                <Input id="base" value={formData.base} onChange={(e) => handleChange('base', e.target.value)} placeholder="Digite a base..." />
+                <Select value={formData.base} onValueChange={(v) => handleChange('base', v)}>
+                  <SelectTrigger id="base">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Litoral Resgate">Litoral Resgate</SelectItem>
+                    <SelectItem value="Litoral Policial">Litoral Policial</SelectItem>
+                    <SelectItem value="Curitiba Resgate">Curitiba Resgate</SelectItem>
+                    <SelectItem value="Curitiba Policial">Curitiba Policial</SelectItem>
+                    <SelectItem value="Londrina Policial">Londrina Policial</SelectItem>
+                    <SelectItem value="Cascavel Policial">Cascavel Policial</SelectItem>
+                    <SelectItem value="Umuarama Policial">Umuarama Policial</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
             </div>
           </div>
@@ -814,26 +849,28 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                   {shouldShowCoordinates(stage, 'origin') && (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Latitude Origem</Label>
-                          <Input 
-                            value={stage.origin_lat} 
-                            onChange={(e) => handleStageChange(index, 'origin_lat', e.target.value)}
-                            placeholder="DDMMSS"
-                            maxLength={6}
-                            disabled={!isZZZZ(stage.origin)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Longitude Origem</Label>
-                          <Input 
-                            value={stage.origin_lon} 
-                            onChange={(e) => handleStageChange(index, 'origin_lon', e.target.value)}
-                            placeholder="DDDMMSS"
-                            maxLength={7}
-                            disabled={!isZZZZ(stage.origin)}
-                          />
-                        </div>
+                       <div>
+                         <Label>Latitude Origem {!missionInOperation && '*'}</Label>
+                         <Input 
+                           value={stage.origin_lat} 
+                           onChange={(e) => handleStageChange(index, 'origin_lat', e.target.value)}
+                           placeholder="DDMMSS"
+                           maxLength={6}
+                           disabled={!isZZZZ(stage.origin)}
+                           required={!missionInOperation}
+                         />
+                       </div>
+                       <div>
+                         <Label>Longitude Origem {!missionInOperation && '*'}</Label>
+                         <Input 
+                           value={stage.origin_lon} 
+                           onChange={(e) => handleStageChange(index, 'origin_lon', e.target.value)}
+                           placeholder="DDDMMSS"
+                           maxLength={7}
+                           disabled={!isZZZZ(stage.origin)}
+                           required={!missionInOperation}
+                         />
+                       </div>
                       </div>
                       
                       {stage.origin_lat && stage.origin_lon && (
@@ -867,26 +904,28 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                   {shouldShowCoordinates(stage, 'destination') && (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Latitude Destino</Label>
-                          <Input 
-                            value={stage.destination_lat} 
-                            onChange={(e) => handleStageChange(index, 'destination_lat', e.target.value)}
-                            placeholder="DDMMSS"
-                            maxLength={6}
-                            disabled={!isZZZZ(stage.destination)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Longitude Destino</Label>
-                          <Input 
-                            value={stage.destination_lon} 
-                            onChange={(e) => handleStageChange(index, 'destination_lon', e.target.value)}
-                            placeholder="DDDMMSS"
-                            maxLength={7}
-                            disabled={!isZZZZ(stage.destination)}
-                          />
-                        </div>
+                       <div>
+                         <Label>Latitude Destino {!missionInOperation && '*'}</Label>
+                         <Input 
+                           value={stage.destination_lat} 
+                           onChange={(e) => handleStageChange(index, 'destination_lat', e.target.value)}
+                           placeholder="DDMMSS"
+                           maxLength={6}
+                           disabled={!isZZZZ(stage.destination)}
+                           required={!missionInOperation}
+                         />
+                       </div>
+                       <div>
+                         <Label>Longitude Destino {!missionInOperation && '*'}</Label>
+                         <Input 
+                           value={stage.destination_lon} 
+                           onChange={(e) => handleStageChange(index, 'destination_lon', e.target.value)}
+                           placeholder="DDDMMSS"
+                           maxLength={7}
+                           disabled={!isZZZZ(stage.destination)}
+                           required={!missionInOperation}
+                         />
+                       </div>
                       </div>
                       
                       {stage.destination_lat && stage.destination_lon && (
@@ -1322,8 +1361,15 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         </CardHeader>
         <CardContent className="p-6">
           <div>
-            <Label htmlFor="remarks">Observações e Detalhes da Missão</Label>
-            <Textarea id="remarks" value={formData.remarks} onChange={(e) => handleChange('remarks', e.target.value)} placeholder="Adicione observações relevantes sobre a missão..." className="h-32" />
+            <Label htmlFor="remarks">Observações e Detalhes da Missão {!missionInOperation && '*'}</Label>
+            <Textarea 
+              id="remarks" 
+              value={formData.remarks} 
+              onChange={(e) => handleChange('remarks', e.target.value)} 
+              placeholder="Adicione observações relevantes sobre a missão..." 
+              className="h-32"
+              required={!missionInOperation}
+            />
           </div>
         </CardContent>
       </Card>

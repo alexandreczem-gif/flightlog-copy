@@ -170,6 +170,11 @@ export default function AbastecimentosPage() {
       return;
     }
 
+    if (!formData.uaa_plate) {
+      alert("Por favor, selecione a placa da UAA.");
+      return;
+    }
+
     if (formData.uaa_abastecimento) {
       // Para abastecimento UAA: quantidade e nota são obrigatórios
       if (!formData.nota_numero) {
@@ -357,9 +362,9 @@ export default function AbastecimentosPage() {
                 )}
                 
                 <div>
-                   <Label htmlFor="uaa_plate">Placa da UAA (Origem/Destino)</Label>
+                   <Label htmlFor="uaa_plate">Placa da UAA (Origem/Destino) *</Label>
                    {uaaList.length > 0 ? (
-                     <Select value={formData.uaa_plate} onValueChange={(v) => handleChange('uaa_plate', v)}>
+                     <Select value={formData.uaa_plate} onValueChange={(v) => handleChange('uaa_plate', v)} required>
                        <SelectTrigger><SelectValue placeholder="Selecione a UAA..." /></SelectTrigger>
                        <SelectContent>
                          {uaaList.map(u => <SelectItem key={u.id} value={u.name}>{u.name} (Eq. {u.team})</SelectItem>)}
