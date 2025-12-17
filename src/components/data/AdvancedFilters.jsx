@@ -24,6 +24,7 @@ export default function AdvancedFilters({ onFilterChange }) {
         sade_occurrence: '',
         mission_id: '',
         aircraft: '',
+        municipality: '',
         mission_type: '',
         commander: '',
         heli_operations: '',
@@ -170,6 +171,15 @@ export default function AdvancedFilters({ onFilterChange }) {
                                         {AIRCRAFT_OPTIONS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div>
+                                <Label htmlFor="municipality">Município</Label>
+                                <Input
+                                    id="municipality"
+                                    value={filters.municipality}
+                                    onChange={(e) => handleFilterChange('municipality', e.target.value)}
+                                    placeholder="Filtrar por município"
+                                />
                             </div>
                             <div>
                                 <Label htmlFor="mission_type">Tipo de Missão</Label>
