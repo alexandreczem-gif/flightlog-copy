@@ -102,6 +102,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
     sade_occurrence_number: initialData?.sade_occurrence_number || '',
     diario_bordo_pagina: initialData?.diario_bordo_pagina || '',
     aircraft: initialData?.aircraft || '',
+    municipality: initialData?.municipality || '',
     mission_type: initialData?.mission_type || '',
     mission_type_pm: initialData?.mission_type_pm || '',
     pilot_in_command: initialData?.pilot_in_command || '',
@@ -177,6 +178,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   const [users, setUsers] = useState([]);
   const [aerodromos, setAerodromos] = useState([]);
   const [hospitals, setHospitals] = useState([]);
+  const [cities, setCities] = useState([]);
   const [filteredAircraft, setFilteredAircraft] = useState([]);
   const [availableBases, setAvailableBases] = useState([]);
   const [pendingVictims, setPendingVictims] = useState([]);
@@ -184,14 +186,16 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [tripulantesList, aerodromosList, hospitalsList, victimRecords] = await Promise.all([
+        const [tripulantesList, aerodromosList, hospitalsList, citiesList, victimRecords] = await Promise.all([
           base44.entities.Tripulante.list(),
           base44.entities.Aerodromo.list(),
           base44.entities.Hospital.list(),
+          base44.entities.City.list(),
           base44.entities.VictimRecord.filter({ pending_registration: true })
         ]);
         
         setHospitals(hospitalsList);
+        setCities(citiesList);
         setPendingVictims(victimRecords);
         
         const tripulanteList = tripulantesList.map(t => ({
@@ -347,7 +351,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         age: '',
         life_code: '',
         drowning_grade: 'NA',
-        origin_city: '',
+        origin_city: formData.municipality || '',
         origin_city_special: '',
         origin_hospital: '',
         origin_landing_site: '',
@@ -692,6 +696,27 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                 <p className="text-xs text-red-500 mt-1">Cadastre o mapa da força</p>
               )}
             </div>
+            <div>
+              <Label htmlFor="municipality">Município</Label>
+              <Select
+                value={formData.municipality}
+                onValueChange={(v) => handleChange('municipality', v)}
+              >
+                <SelectTrigger id="municipality">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map(city => (
+                    <SelectItem key={city.id} value={city.name}>
+                      {city.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="mission_type">Natureza da Missão BM</Label>
               <Select 
