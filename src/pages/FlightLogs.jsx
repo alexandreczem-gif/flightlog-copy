@@ -159,8 +159,13 @@ export default function FlightLogs() {
       return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
     };
     
-    // Exportar apenas os logs filtrados
-    const headers = filteredLogs.length > 0 ? Object.keys(filteredLogs[0]) : [];
+    // Coletar todos os campos únicos de todos os logs filtrados
+    const allFields = new Set();
+    filteredLogs.forEach(log => {
+      Object.keys(log).forEach(key => allFields.add(key));
+    });
+    const headers = Array.from(allFields).sort();
+    
     const csvContent = [
       headers.join(','),
       ...filteredLogs.map(log => 
@@ -173,14 +178,24 @@ export default function FlightLogs() {
           }
           
           if (Array.isArray(log[header])) {
-            return `"${log[header].map(item => String(item).replace(/"/g, '""')).join(';')}"`;
+            return `"${log[header].map(item => {
+              if (typeof item === 'object') {
+                return JSON.stringify(item).replace(/"/g, '""');
+              }
+              return String(item).replace(/"/g, '""');
+            }).join(';')}"`;
           }
+          
+          if (typeof log[header] === 'object' && log[header] !== null) {
+            return `"${JSON.stringify(log[header]).replace(/"/g, '""')}"`;
+          }
+          
           return `"${value.replace(/"/g, '""')}"`;
         }).join(',')
       )
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
