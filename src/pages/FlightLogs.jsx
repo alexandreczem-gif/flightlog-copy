@@ -159,7 +159,7 @@ export default function FlightLogs() {
     };
     
     // Exportar apenas os logs filtrados
-    const headers = Object.keys(FlightLog.schema().properties);
+    const headers = Object.keys(base44.entities.FlightLog.schema().properties);
     const csvContent = [
       headers.join(','),
       ...filteredLogs.map(log => 
