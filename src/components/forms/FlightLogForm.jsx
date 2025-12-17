@@ -12,6 +12,7 @@ import { base44 } from '@/api/base44Client';
 import CoordinateMap from './CoordinateMap';
 import HospitalCombobox from './HospitalCombobox';
 import CitySelect from './CitySelect';
+import MunicipalityCombobox from './MunicipalityCombobox';
 
 const MISSION_TYPES = [
   "Remoção aeromédica", "Resgate aeromédico", "Busca Terrestre", "Busca Aquática",
@@ -733,21 +734,11 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
             </div>
             <div>
               <Label htmlFor="municipality">Município</Label>
-              <Select
+              <MunicipalityCombobox
                 value={formData.municipality}
-                onValueChange={(v) => handleChange('municipality', v)}
-              >
-                <SelectTrigger id="municipality">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {cities.map(city => (
-                    <SelectItem key={city.id} value={city.name}>
-                      {city.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => handleChange('municipality', v)}
+                placeholder="Digite o município..."
+              />
             </div>
           </div>
 
