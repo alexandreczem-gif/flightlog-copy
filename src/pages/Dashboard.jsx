@@ -236,12 +236,20 @@ export default function Dashboard() {
               Visão geral das operações da unidade aérea.
             </p>
           </div>
-          <Link to={createPageUrl("NewFlightLog")}>
-            <Button className="bg-red-700 hover:bg-red-800 text-white shadow-lg shadow-red-500/30">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Registro de Voo
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link to={createPageUrl("UserProfile")}>
+              <Button variant="outline" className="border-slate-300">
+                <Settings className="w-4 h-4 mr-2" />
+                Editar Meu Perfil
+              </Button>
+            </Link>
+            <Link to={createPageUrl("NewFlightLog")}>
+              <Button className="bg-red-700 hover:bg-red-800 text-white shadow-lg shadow-red-500/30">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Registro de Voo
+              </Button>
+            </Link>
+          </div>
         </motion.div>
 
         {isAdmin && (

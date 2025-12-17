@@ -143,22 +143,6 @@ export default function Layout({ children, currentPageName }) {
         setError(null);
         const user = await base44.auth.me();
         setCurrentUser(user);
-        
-        // Redirecionar novos usuários para o perfil (exceto se for admin ou estiver em página de admin)
-        const adminPages = [
-          createPageUrl("UserManagement"),
-          createPageUrl("Aerodromos"),
-          createPageUrl("Hospitais"),
-          createPageUrl("Tripulantes"),
-          createPageUrl("AuditLogs")
-        ];
-        
-        const isAdminPage = adminPages.includes(location.pathname);
-        const isAdmin = user.role === 'admin';
-        
-        if (user.flight_log_role === 'Indefinido' && !isAdmin && !isAdminPage && location.pathname !== createPageUrl("UserProfile")) {
-          navigate(createPageUrl("UserProfile"));
-        }
       } catch (e) {
         setCurrentUser(null);
         console.error("Failed to fetch user:", e);
