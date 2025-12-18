@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Download, Upload, Trash2, Search } from "lucide-react";
+import { Plus, Download, Upload, Trash2, Search, Edit2, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Diagnosticos() {
@@ -19,6 +19,8 @@ export default function Diagnosticos() {
   const [showDialog, setShowDialog] = useState(false);
   const [newCid, setNewCid] = useState({ subcategoria: "", descricao: "" });
   const [isSaving, setIsSaving] = useState(false);
+  const [editingCid, setEditingCid] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const fileInputRef = React.useRef(null);
 
   useEffect(() => {
@@ -178,8 +180,8 @@ export default function Diagnosticos() {
           return;
         }
 
-        // Importar em lotes menores (50) para evitar sobrecarga
-        const batchSize = 50;
+        // Importar em lotes grandes (15000)
+        const batchSize = 15000;
         let imported = 0;
         let errors = 0;
         
@@ -212,6 +214,47 @@ export default function Diagnosticos() {
     reader.readAsText(file);
   };
 
+  const handleEdit = (cid) => {
+    setEditingCid({ ...cid });
+    setShowEditDialog(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCid.subcategoria || !editingCid.descricao) {
+      alert("Por favor, preencha todos os campos.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await base44.entities.CID.update(editingCid.id, {
+        subcategoria: editingCid.subcategoria,
+        descricao: editingCid.descricao
+      });
+      alert("CID atualizado com sucesso!");
+      setShowEditDialog(false);
+      setEditingCid(null);
+      loadData();
+    } catch (error) {
+      console.error("Erro ao atualizar CID:", error);
+      alert(`Erro ao atualizar CID: ${error.message || error}`);
+    }
+    setIsSaving(false);
+  };
+
+  const handleDelete = async (cidId) => {
+    const confirm = window.confirm("Tem certeza que deseja excluir este registro?");
+    if (!confirm) return;
+
+    try {
+      await base44.entities.CID.delete(cidId);
+      alert("Registro excluído com sucesso!");
+      loadData();
+    } catch (error) {
+      console.error("Erro ao excluir registro:", error);
+      alert(`Erro ao excluir registro: ${error.message || error}`);
+    }
+  };
+
   const handleDeleteAll = async () => {
     try {
       // Buscar todos os CIDs para contar
@@ -227,8 +270,8 @@ export default function Diagnosticos() {
       );
       if (!confirmAgain) return;
 
-      // Excluir em lotes menores (50) para evitar sobrecarga
-      const batchSize = 50;
+      // Excluir em lotes grandes (15000)
+      const batchSize = 15000;
       let deleted = 0;
       
       for (let i = 0; i < allCids.length; i += batchSize) {
@@ -342,6 +385,54 @@ export default function Diagnosticos() {
           </div>
         </motion.div>
 
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar CID</DialogTitle>
+            </DialogHeader>
+            {editingCid && (
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="edit-subcategoria">Subcategoria *</Label>
+                  <Input
+                    id="edit-subcategoria"
+                    value={editingCid.subcategoria}
+                    onChange={(e) =>
+                      setEditingCid({ ...editingCid, subcategoria: e.target.value })
+                    }
+                    placeholder="Ex: A00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-descricao">Descrição *</Label>
+                  <Input
+                    id="edit-descricao"
+                    value={editingCid.descricao}
+                    onChange={(e) =>
+                      setEditingCid({ ...editingCid, descricao: e.target.value })
+                    }
+                    placeholder="Ex: Cólera"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setEditingCid(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveEdit} disabled={isSaving}>
+                    {isSaving ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
@@ -377,6 +468,9 @@ export default function Diagnosticos() {
                       <th className="text-left p-3 font-semibold text-slate-700">
                         Descrição
                       </th>
+                      <th className="text-right p-3 font-semibold text-slate-700 w-24">
+                        Ações
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -387,6 +481,24 @@ export default function Diagnosticos() {
                       >
                         <td className="p-3 border-t">{cid.subcategoria}</td>
                         <td className="p-3 border-t">{cid.descricao}</td>
+                        <td className="p-3 border-t text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleEdit(cid)}
+                              className="p-1 hover:bg-blue-100 rounded text-blue-600"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(cid.id)}
+                              className="p-1 hover:bg-red-100 rounded text-red-600"
+                              title="Excluir"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
