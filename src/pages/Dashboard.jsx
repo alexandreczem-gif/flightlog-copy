@@ -27,18 +27,20 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
   const checkAccessAndLoad = async () => {
-    setError(null);
-    try {
-      const user = await base44.auth.me();
-      setHasAccess(true);
-      setIsAdmin(user.role === 'admin');
-      loadData();
-    } catch (error) {
-      console.error("Erro ao verificar acesso:", error);
-      setError(error.message || "Erro de conexão");
-    }
+  setError(null);
+  try {
+    const currentUser = await base44.auth.me();
+    setUser(currentUser);
+    setHasAccess(true);
+    setIsAdmin(currentUser.role === 'admin');
+    loadData();
+  } catch (error) {
+    console.error("Erro ao verificar acesso:", error);
+    setError(error.message || "Erro de conexão");
+  }
   };
 
   useEffect(() => {
@@ -243,6 +245,14 @@ export default function Dashboard() {
                 Editar Meu Perfil
               </Button>
             </Link>
+            {user?.flight_log_role === 'OSM' && (
+              <Link to={createPageUrl("NewPendingVictim")}>
+                <Button className="bg-green-700 hover:bg-green-800 text-white shadow-lg shadow-green-500/30">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Vítima Não Registrada
+                </Button>
+              </Link>
+            )}
             <Link to={createPageUrl("NewFlightLog")}>
               <Button className="bg-red-700 hover:bg-red-800 text-white shadow-lg shadow-red-500/30">
                 <Plus className="w-4 h-4 mr-2" />
