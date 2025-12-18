@@ -30,6 +30,65 @@ export function MultiServiceReport({ services }) {
     setIsGenerating(true);
     try {
       const selectedServices = services.filter(s => selectedIds.includes(s.id));
+      const serviceDate = selectedServices[0]?.date;
+      
+      // Buscar dados adicionais
+      const [operationSettings, allFlightLogs, allVictimRecords, todayFuelings] = await Promise.all([
+        base44.entities.OperationSettings.list(),
+        base44.entities.FlightLog.list('-date', 1000),
+        base44.entities.VictimRecord.list('-data', 2000),
+        base44.entities.Abastecimento.filter({ date: serviceDate })
+      ]);
+
+      // Processar dados da operação
+      let operationData = null;
+      let weekData = null;
+      
+      if (operationSettings.length > 0) {
+        const settings = operationSettings[0];
+        const opStartDate = settings.operation_start_date;
+        const opBase = settings.operation_base;
+
+        if (opStartDate) {
+          let operationLogs = allFlightLogs.filter(log => log.date >= opStartDate);
+          if (opBase) {
+            operationLogs = operationLogs.filter(log => log.base === opBase);
+          }
+
+          const operationVictims = allVictimRecords.filter(r => {
+            if (!r.data) return false;
+            const matchesDate = r.data >= opStartDate;
+            const matchesBase = opBase ? r.base === opBase : true;
+            return matchesDate && matchesBase;
+          });
+
+          operationData = {
+            startDate: opStartDate,
+            base: opBase,
+            logs: operationLogs,
+            victims: operationVictims,
+            stats: calculateStats(operationLogs, operationVictims)
+          };
+        }
+      }
+
+      // Dados da última semana (desde quarta-feira)
+      const today = new Date(serviceDate + 'T12:00:00');
+      const dayOfWeek = today.getDay();
+      const daysToWednesday = (dayOfWeek + 4) % 7;
+      const lastWednesday = new Date(today);
+      lastWednesday.setDate(today.getDate() - daysToWednesday);
+      const lastWednesdayStr = format(lastWednesday, 'yyyy-MM-dd');
+
+      const weekLogs = allFlightLogs.filter(log => log.date >= lastWednesdayStr && log.date <= serviceDate);
+      const weekVictims = allVictimRecords.filter(r => r.data >= lastWednesdayStr && r.data <= serviceDate);
+
+      weekData = {
+        startDate: lastWednesdayStr,
+        logs: weekLogs,
+        victims: weekVictims,
+        stats: calculateStats(weekLogs, weekVictims)
+      };
       
       // Buscar todas as missões relacionadas e abastecimentos
       const allMissions = [];
@@ -61,7 +120,7 @@ export function MultiServiceReport({ services }) {
         allMissions.push({ service, missions, fuelings, stats });
       }
 
-      const html = generateConsolidatedHTML(selectedServices, allMissions);
+      const html = generateConsolidatedHTML(selectedServices, allMissions, operationData, weekData, todayFuelings);
       
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
@@ -80,11 +139,127 @@ export function MultiServiceReport({ services }) {
     }
   };
 
-  const generateConsolidatedHTML = (services, serviceMissions) => {
+  const calculateStats = (logs, victims) => {
+    const totalFlightHours = logs.reduce((sum, log) => sum + (log.flight_duration || 0), 0);
+    const formattedHours = Math.floor(totalFlightHours / 60) + 'h ' + (totalFlightHours % 60) + 'min';
+    
+    const totalRescuedVictims = logs.reduce((sum, log) => sum + (Number(log.rescued_victims_count) || 0), 0);
+    const totalOrientedPeople = logs.reduce((sum, log) => sum + (Number(log.oriented_people_count) || 0), 0);
+    const totalWaterLaunched = logs.reduce((sum, log) => {
+      const launches = Number(log.helibalde_launches) || 0;
+      const load = Number(log.helibalde_load_liters) || 0;
+      return sum + (launches * load);
+    }, 0);
+    const totalHeliOperations = logs.reduce((sum, log) => {
+      if (log.heli_operations && Array.isArray(log.heli_operations)) {
+        return sum + log.heli_operations.length;
+      }
+      return sum;
+    }, 0);
+
+    return {
+      totalFlights: logs.length,
+      formattedHours,
+      totalVictims: victims.length,
+      totalRescuedVictims,
+      totalOrientedPeople,
+      totalWaterLaunched,
+      totalHeliOperations
+    };
+  };
+
+  const generateConsolidatedHTML = (services, serviceMissions, operationData, weekData, todayFuelings) => {
     const dates = [...new Set(services.map(s => s.date))];
     const dateRange = dates.length === 1 
       ? format(new Date(dates[0] + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
       : `${format(new Date(Math.min(...dates.map(d => new Date(d)))), 'dd/MM/yyyy', { locale: ptBR })} a ${format(new Date(Math.max(...dates.map(d => new Date(d)))), 'dd/MM/yyyy', { locale: ptBR })}`;
+
+    // Preparar dados para gráficos
+    let missionTypeChartData = '';
+    let flightHoursChartData = '';
+
+    if (operationData) {
+      // Gráfico de pizza - tipos de missão
+      const missionCounts = {};
+      operationData.logs.forEach(log => {
+        const type = log.mission_type || log.mission_type_pm || 'Não especificado';
+        missionCounts[type] = (missionCounts[type] || 0) + 1;
+      });
+
+      const pieColors = ['#dc2626', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+      const pieLabels = Object.keys(missionCounts);
+      const pieValues = Object.values(missionCounts);
+
+      missionTypeChartData = `
+        <canvas id="missionPieChart" width="400" height="400"></canvas>
+        <script>
+          const pieCtx = document.getElementById('missionPieChart').getContext('2d');
+          const pieData = {
+            labels: ${JSON.stringify(pieLabels)},
+            datasets: [{
+              data: ${JSON.stringify(pieValues)},
+              backgroundColor: ${JSON.stringify(pieColors.slice(0, pieLabels.length))}
+            }]
+          };
+          new Chart(pieCtx, {
+            type: 'pie',
+            data: pieData,
+            options: {
+              responsive: false,
+              plugins: {
+                legend: { position: 'bottom' },
+                title: { display: true, text: 'Tipos de Missão da Operação' }
+              }
+            }
+          });
+        </script>
+      `;
+
+      // Gráfico de linha - horas voadas por dia
+      const dailyHours = {};
+      operationData.logs.forEach(log => {
+        const date = log.date;
+        if (!dailyHours[date]) {
+          dailyHours[date] = 0;
+        }
+        dailyHours[date] += (log.flight_duration || 0) / 60;
+      });
+
+      const sortedDates = Object.keys(dailyHours).sort();
+      const hoursValues = sortedDates.map(d => dailyHours[d].toFixed(1));
+
+      flightHoursChartData = `
+        <canvas id="hoursLineChart" width="600" height="300"></canvas>
+        <script>
+          const lineCtx = document.getElementById('hoursLineChart').getContext('2d');
+          const lineData = {
+            labels: ${JSON.stringify(sortedDates.map(d => format(new Date(d + 'T12:00:00'), 'dd/MM')))},
+            datasets: [{
+              label: 'Horas Voadas',
+              data: ${JSON.stringify(hoursValues)},
+              borderColor: '#dc2626',
+              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              tension: 0.3,
+              fill: true
+            }]
+          };
+          new Chart(lineCtx, {
+            type: 'line',
+            data: lineData,
+            options: {
+              responsive: false,
+              plugins: {
+                legend: { display: true },
+                title: { display: true, text: 'Evolução das Horas Voadas - Operação Atual' }
+              },
+              scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Horas' } }
+              }
+            }
+          });
+        </script>
+      `;
+    }
 
     return `
       <!DOCTYPE html>
@@ -92,6 +267,7 @@ export function MultiServiceReport({ services }) {
       <head>
         <meta charset="UTF-8">
         <title>Relatório Consolidado de Serviços</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <style>
           @media print {
             @page { margin: 1.5cm; }
@@ -231,6 +407,45 @@ export function MultiServiceReport({ services }) {
             color: #92400e;
             font-size: 16px;
           }
+          .stats-section {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 2px solid #3b82f6;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+            page-break-inside: avoid;
+          }
+          .stats-section h3 {
+            margin: 0 0 15px 0;
+            color: #1e40af;
+            font-size: 18px;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 8px;
+          }
+          .chart-container {
+            margin: 20px 0;
+            text-align: center;
+            page-break-inside: avoid;
+          }
+          .fueling-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 12px;
+          }
+          .fueling-table th {
+            background: #dc2626;
+            color: white;
+            padding: 10px;
+            text-align: left;
+          }
+          .fueling-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+          }
+          .fueling-table tr:nth-child(even) {
+            background: #f8fafc;
+          }
         </style>
       </head>
       <body>
@@ -261,6 +476,118 @@ export function MultiServiceReport({ services }) {
             </div>
           </div>
         </div>
+
+        ${todayFuelings && todayFuelings.length > 0 ? `
+          <div class="stats-section">
+            <h3>📊 Abastecimentos Realizados no Dia</h3>
+            <table class="fueling-table">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Aeronave/UAA</th>
+                  <th>Quantidade (L)</th>
+                  <th>Nota Fiscal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${todayFuelings.map(f => `
+                  <tr>
+                    <td>${f.time || '-'}</td>
+                    <td>${f.uaa_abastecimento ? 'Entrada UAA' : 'Saída para Aeronave'}</td>
+                    <td>${f.uaa_abastecimento ? f.uaa_plate || '-' : (f.aircraft_designator || f.aircraft_prefix || '-')}</td>
+                    <td><strong>${f.quantity_liters || 0} L</strong></td>
+                    <td>${f.nota_numero || '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr style="background: #fef3c7; font-weight: bold;">
+                  <td colspan="3">Total Abastecido</td>
+                  <td>${todayFuelings.reduce((sum, f) => sum + (Number(f.quantity_liters) || 0), 0)} L</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+
+        ${operationData ? `
+          <div class="stats-section">
+            <h3>📈 Dados da Operação Atual</h3>
+            <p style="color: #1e40af; margin-bottom: 15px;">
+              <strong>Período:</strong> Desde ${format(new Date(operationData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+              ${operationData.base ? ` | <strong>Base:</strong> ${operationData.base}` : ''}
+            </p>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Total de Voos</div>
+                <div class="info-value">${operationData.stats.totalFlights}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Horas Voadas</div>
+                <div class="info-value">${operationData.stats.formattedHours}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas/Pacientes</div>
+                <div class="info-value">${operationData.stats.totalVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-value">${operationData.stats.totalRescuedVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Pessoas Orientadas</div>
+                <div class="info-value">${operationData.stats.totalOrientedPeople}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Água Lançada</div>
+                <div class="info-value">${operationData.stats.totalWaterLaunched} L</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              ${missionTypeChartData}
+            </div>
+
+            <div class="chart-container">
+              ${flightHoursChartData}
+            </div>
+          </div>
+        ` : ''}
+
+        ${weekData ? `
+          <div class="stats-section">
+            <h3>👥 Dados de Voo da Tripulação da Semana</h3>
+            <p style="color: #1e40af; margin-bottom: 15px;">
+              <strong>Período:</strong> Desde ${format(new Date(weekData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+            </p>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Total de Voos</div>
+                <div class="info-value">${weekData.stats.totalFlights}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Horas Voadas</div>
+                <div class="info-value">${weekData.stats.formattedHours}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas/Pacientes</div>
+                <div class="info-value">${weekData.stats.totalVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-value">${weekData.stats.totalRescuedVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Pessoas Orientadas</div>
+                <div class="info-value">${weekData.stats.totalOrientedPeople}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Operações Helitransportadas</div>
+                <div class="info-value">${weekData.stats.totalHeliOperations}</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
 
         ${serviceMissions.map(({ service, missions, fuelings, stats }) => {
           const dateFormatted = format(new Date(service.date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
