@@ -94,12 +94,13 @@ export default function Diagnosticos() {
     setIsSaving(true);
     try {
       await base44.entities.CID.create(newCid);
+      alert("CID cadastrado com sucesso!");
       setNewCid({ subcategoria: "", descricao: "" });
       setShowDialog(false);
       loadData();
     } catch (error) {
       console.error("Erro ao salvar CID:", error);
-      alert("Erro ao salvar CID.");
+      alert(`Erro ao salvar CID: ${error.message || error}`);
     }
     setIsSaving(false);
   };
@@ -177,18 +178,28 @@ export default function Diagnosticos() {
           return;
         }
 
-        // Importar em lotes de 100 para evitar sobrecarga
-        const batchSize = 100;
+        // Importar em lotes menores (50) para evitar sobrecarga
+        const batchSize = 50;
         let imported = 0;
+        let errors = 0;
         
         for (let i = 0; i < dataToImport.length; i += batchSize) {
           const batch = dataToImport.slice(i, i + batchSize);
-          await Promise.all(batch.map((d) => base44.entities.CID.create(d)));
-          imported += batch.length;
-          console.log(`Importados ${imported} de ${dataToImport.length} registros...`);
+          try {
+            await Promise.all(batch.map((d) => base44.entities.CID.create(d)));
+            imported += batch.length;
+            console.log(`Importados ${imported} de ${dataToImport.length} registros...`);
+          } catch (error) {
+            console.error(`Erro no lote ${i}-${i+batchSize}:`, error);
+            errors += batch.length;
+          }
         }
         
-        alert(`${dataToImport.length} registros importados com sucesso!`);
+        if (errors > 0) {
+          alert(`Importação concluída com problemas:\n${imported} registros importados com sucesso\n${errors} registros falharam`);
+        } else {
+          alert(`${imported} registros importados com sucesso!`);
+        }
         loadData();
       } catch (error) {
         console.error("Erro na importação:", error);
@@ -216,18 +227,22 @@ export default function Diagnosticos() {
       );
       if (!confirmAgain) return;
 
-      // Excluir em lotes de 100 para evitar sobrecarga
-      const batchSize = 100;
+      // Excluir em lotes menores (50) para evitar sobrecarga
+      const batchSize = 50;
       let deleted = 0;
       
       for (let i = 0; i < allCids.length; i += batchSize) {
         const batch = allCids.slice(i, i + batchSize);
-        await Promise.all(batch.map((cid) => base44.entities.CID.delete(cid.id)));
-        deleted += batch.length;
-        console.log(`Excluídos ${deleted} de ${allCids.length} registros...`);
+        try {
+          await Promise.all(batch.map((cid) => base44.entities.CID.delete(cid.id)));
+          deleted += batch.length;
+          console.log(`Excluídos ${deleted} de ${allCids.length} registros...`);
+        } catch (error) {
+          console.error(`Erro ao excluir lote ${i}-${i+batchSize}:`, error);
+        }
       }
       
-      alert("Todos os registros foram excluídos.");
+      alert(`${deleted} registros foram excluídos.`);
       loadData();
     } catch (error) {
       console.error("Erro ao excluir registros:", error);
