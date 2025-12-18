@@ -5,6 +5,7 @@ import Cidades from './pages/Cidades';
 import CreateForm from './pages/CreateForm';
 import DailyService from './pages/DailyService';
 import Dashboard from './pages/Dashboard';
+import Diagnosticos from './pages/Diagnosticos';
 import EditDailyService from './pages/EditDailyService';
 import EditFlightLog from './pages/EditFlightLog';
 import EditUserProfile from './pages/EditUserProfile';
@@ -23,7 +24,6 @@ import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VictimRecords from './pages/VictimRecords';
 import ViewData from './pages/ViewData';
-import Diagnosticos from './pages/Diagnosticos';
 import __Layout from './Layout.jsx';
 
 
@@ -35,6 +35,7 @@ export const PAGES = {
     "CreateForm": CreateForm,
     "DailyService": DailyService,
     "Dashboard": Dashboard,
+    "Diagnosticos": Diagnosticos,
     "EditDailyService": EditDailyService,
     "EditFlightLog": EditFlightLog,
     "EditUserProfile": EditUserProfile,
@@ -53,7 +54,6 @@ export const PAGES = {
     "UserProfile": UserProfile,
     "VictimRecords": VictimRecords,
     "ViewData": ViewData,
-    "Diagnosticos": Diagnosticos,
 }
 
 export const pagesConfig = {

@@ -26,19 +26,38 @@ export default function Diagnosticos() {
   }, []);
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredCids(cids);
-    } else {
-      const term = searchTerm.toLowerCase();
-      setFilteredCids(
-        cids.filter(
-          (cid) =>
-            cid.subcategoria.toLowerCase().includes(term) ||
-            cid.descricao.toLowerCase().includes(term)
-        )
-      );
-    }
-  }, [searchTerm, cids]);
+    const searchCIDs = async () => {
+      if (searchTerm.trim() === "") {
+        const data = await base44.entities.CID.list("subcategoria", 100);
+        setCids(data);
+        setFilteredCids(data);
+      } else {
+        // Buscar no backend usando filter
+        const term = searchTerm.toLowerCase();
+        try {
+          const results = await base44.entities.CID.filter(
+            {
+              $or: [
+                { subcategoria: { $regex: searchTerm, $options: 'i' } },
+                { descricao: { $regex: searchTerm, $options: 'i' } }
+              ]
+            },
+            'subcategoria',
+            100
+          );
+          setFilteredCids(results);
+        } catch (error) {
+          console.error("Erro ao buscar CIDs:", error);
+        }
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      searchCIDs();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   const checkAccess = async () => {
     try {
@@ -57,7 +76,8 @@ export default function Diagnosticos() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const data = await base44.entities.CID.list("subcategoria", 20000);
+      // Carregar apenas os primeiros 100 registros para exibição inicial
+      const data = await base44.entities.CID.list("subcategoria", 100);
       setCids(data);
       setFilteredCids(data);
     } catch (error) {
@@ -157,7 +177,17 @@ export default function Diagnosticos() {
           return;
         }
 
-        await Promise.all(dataToImport.map((d) => base44.entities.CID.create(d)));
+        // Importar em lotes de 100 para evitar sobrecarga
+        const batchSize = 100;
+        let imported = 0;
+        
+        for (let i = 0; i < dataToImport.length; i += batchSize) {
+          const batch = dataToImport.slice(i, i + batchSize);
+          await Promise.all(batch.map((d) => base44.entities.CID.create(d)));
+          imported += batch.length;
+          console.log(`Importados ${imported} de ${dataToImport.length} registros...`);
+        }
+        
         alert(`${dataToImport.length} registros importados com sucesso!`);
         loadData();
       } catch (error) {
@@ -172,18 +202,31 @@ export default function Diagnosticos() {
   };
 
   const handleDeleteAll = async () => {
-    const confirm = window.confirm(
-      `Tem certeza que deseja excluir TODOS os ${cids.length} registros de CID? Esta ação não pode ser desfeita.`
-    );
-    if (!confirm) return;
-
-    const confirmAgain = window.confirm(
-      "CONFIRMAÇÃO FINAL: Todos os registros serão excluídos permanentemente. Deseja continuar?"
-    );
-    if (!confirmAgain) return;
-
     try {
-      await Promise.all(cids.map((cid) => base44.entities.CID.delete(cid.id)));
+      // Buscar todos os CIDs para contar
+      const allCids = await base44.entities.CID.list('subcategoria', 20000);
+      
+      const confirm = window.confirm(
+        `Tem certeza que deseja excluir TODOS os ${allCids.length} registros de CID? Esta ação não pode ser desfeita.`
+      );
+      if (!confirm) return;
+
+      const confirmAgain = window.confirm(
+        "CONFIRMAÇÃO FINAL: Todos os registros serão excluídos permanentemente. Deseja continuar?"
+      );
+      if (!confirmAgain) return;
+
+      // Excluir em lotes de 100 para evitar sobrecarga
+      const batchSize = 100;
+      let deleted = 0;
+      
+      for (let i = 0; i < allCids.length; i += batchSize) {
+        const batch = allCids.slice(i, i + batchSize);
+        await Promise.all(batch.map((cid) => base44.entities.CID.delete(cid.id)));
+        deleted += batch.length;
+        console.log(`Excluídos ${deleted} de ${allCids.length} registros...`);
+      }
+      
       alert("Todos os registros foram excluídos.");
       loadData();
     } catch (error) {
@@ -297,7 +340,7 @@ export default function Diagnosticos() {
                 />
               </div>
               <p className="text-sm text-slate-500">
-                {filteredCids.length} / {cids.length} registros
+                {filteredCids.length} registros
               </p>
             </div>
           </CardHeader>

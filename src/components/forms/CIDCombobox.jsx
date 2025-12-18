@@ -3,15 +3,10 @@ import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
 
 export default function CIDCombobox({ value, onChange, placeholder = "Digite para buscar...", disabled = false }) {
-  const [cids, setCids] = useState([]);
   const [filteredCids, setFilteredCids] = useState([]);
   const [inputValue, setInputValue] = useState(value || '');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    loadCids();
-  }, []);
 
   useEffect(() => {
     setInputValue(value || '');
@@ -27,34 +22,49 @@ export default function CIDCombobox({ value, onChange, placeholder = "Digite par
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadCids = async () => {
-    try {
-      const data = await base44.entities.CID.list('subcategoria', 20000);
-      setCids(data);
-    } catch (error) {
-      console.error('Erro ao carregar CIDs:', error);
-    }
-  };
-
   const handleInputChange = (e) => {
     const val = e.target.value;
     setInputValue(val);
     onChange(val);
 
     if (val.trim().length >= 2) {
-      const term = val.toLowerCase();
-      const filtered = cids.filter(
-        (cid) =>
-          cid.descricao.toLowerCase().includes(term) ||
-          cid.subcategoria.toLowerCase().includes(term)
-      );
-      setFilteredCids(filtered.slice(0, 20));
-      setShowSuggestions(true);
+      // Debounce: buscar após 300ms
+      searchCIDs(val);
     } else {
       setFilteredCids([]);
       setShowSuggestions(false);
     }
   };
+
+  const searchCIDs = React.useMemo(
+    () => {
+      let timeoutId;
+      return (searchTerm) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          try {
+            const results = await base44.entities.CID.filter(
+              {
+                $or: [
+                  { subcategoria: { $regex: searchTerm, $options: 'i' } },
+                  { descricao: { $regex: searchTerm, $options: 'i' } }
+                ]
+              },
+              'subcategoria',
+              20
+            );
+            setFilteredCids(results);
+            setShowSuggestions(results.length > 0);
+          } catch (error) {
+            console.error('Erro ao buscar CIDs:', error);
+            setFilteredCids([]);
+            setShowSuggestions(false);
+          }
+        }, 300);
+      };
+    },
+    []
+  );
 
   const handleSelect = (cid) => {
     const displayValue = `${cid.subcategoria} - ${cid.descricao}`;
