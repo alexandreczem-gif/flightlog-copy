@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, AlertCircle } from 'lucide-react';
+import { Save, AlertCircle, Upload, X, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const BASE_OPTIONS = ["Operação Verão", "Curitiba-BPMOA", "Curitiba-PRF", "Londrina", "Maringá", "Ponta Grossa"];
@@ -67,7 +67,9 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
         indice_choque: null,
         compressor_toracico: '',
         ultrassom_portatil: '',
-        babypod: ''
+        babypod: '',
+        ras_ram_rae_file_url: null,
+        ras_ram_rae_file_url_verso: null
     });
     const [validationErrors, setValidationErrors] = useState({});
     const [isUploadingFrente, setIsUploadingFrente] = useState(false);
@@ -506,6 +508,92 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
                     Os dados de localização (origem/destino) serão preenchidos pelo Piloto/OAT ao registrar a missão.
                 </p>
                 <Textarea value={data.observacoes} onChange={e => handleChange('observacoes', e.target.value)} className="h-32" />
+            </FormSection>
+
+            <FormSection title="RAS - RAM/RAE (Relatório de Atendimento)">
+                <div className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <Label>Arquivo Frente (Opcional)</Label>
+                            {data.ras_ram_rae_file_url ? (
+                                <div className="mt-2 p-4 border rounded-lg bg-slate-50 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                        <span className="text-sm text-slate-700">Arquivo anexado</span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRemoveFile('frente')}
+                                        className="text-red-600 hover:text-red-800"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="mt-2">
+                                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                        <Upload className="w-5 h-5 text-slate-600" />
+                                        <span className="text-sm text-slate-600">
+                                            {isUploadingFrente ? 'Enviando...' : 'Clique para fazer upload'}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => handleFileUpload(e, 'frente')}
+                                            disabled={isUploadingFrente}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Formatos aceitos: imagem ou PDF
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <Label>Arquivo Verso (Opcional)</Label>
+                            {data.ras_ram_rae_file_url_verso ? (
+                                <div className="mt-2 p-4 border rounded-lg bg-slate-50 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                        <span className="text-sm text-slate-700">Arquivo anexado</span>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRemoveFile('verso')}
+                                        className="text-red-600 hover:text-red-800"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="mt-2">
+                                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                        <Upload className="w-5 h-5 text-slate-600" />
+                                        <span className="text-sm text-slate-600">
+                                            {isUploadingVerso ? 'Enviando...' : 'Clique para fazer upload'}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => handleFileUpload(e, 'verso')}
+                                            disabled={isUploadingVerso}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Formatos aceitos: imagem ou PDF
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </FormSection>
 
             <div className="flex justify-end pt-4">
