@@ -187,7 +187,10 @@ export default function VictimRecords() {
 
         // Filtros clínicos
         if (filters.diagnostico) {
-            results = results.filter(r => r.diagnostico_lesao_principal && r.diagnostico_lesao_principal.toLowerCase().includes(filters.diagnostico.toLowerCase()));
+            results = results.filter(r => 
+                (r.diagnostico_principal && r.diagnostico_principal.toLowerCase().includes(filters.diagnostico.toLowerCase())) ||
+                (r.diagnostico_secundario && r.diagnostico_secundario.toLowerCase().includes(filters.diagnostico.toLowerCase()))
+            );
         }
         if (filters.grupo_patologias) {
             results = results.filter(r => r.grupo_patologias === filters.grupo_patologias);
@@ -276,7 +279,20 @@ export default function VictimRecords() {
         
         try {
             // Exportar apenas os registros filtrados
-            const recordsToExport = filteredRecords;
+            const recordsToExport = filteredRecords.map(rec => {
+                const exportRec = { ...rec };
+                // Concatenar diagnóstico_principal e diagnostico_secundario
+                if (rec.diagnostico_principal || rec.diagnostico_secundario) {
+                    exportRec.diagnostico_lesao_principal = [rec.diagnostico_principal, rec.diagnostico_secundario]
+                        .filter(Boolean)
+                        .join(' - ');
+                }
+                // Remover campos separados do export
+                delete exportRec.diagnostico_principal;
+                delete exportRec.diagnostico_secundario;
+                return exportRec;
+            });
+            
             let headers = recordsToExport.length > 0 ? Object.keys(recordsToExport[0]) : [];
             
             // Mover grau_afogamento para o final
