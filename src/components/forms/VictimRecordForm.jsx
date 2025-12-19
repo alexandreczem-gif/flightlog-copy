@@ -9,6 +9,7 @@ import { base44 } from '@/api/base44Client';
 
 import CityCombobox from './CityCombobox';
 import HospitalCombobox from './HospitalCombobox';
+import CIDCombobox from './CIDCombobox';
 import { Checkbox } from "@/components/ui/checkbox";
 
 const BASE_OPTIONS = ["Operação Verão", "Curitiba-BPMOA", "Curitiba-PRF", "Londrina", "Maringá", "Ponta Grossa"];
@@ -109,8 +110,8 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
         }
 
         // Validação dos Dados Clínicos
-        if (!data.diagnostico_lesao_principal || data.diagnostico_lesao_principal.trim() === '') {
-            errors.diagnostico_lesao_principal = "Diagnóstico/Lesão Principal é obrigatório";
+        if (!data.diagnostico_principal || data.diagnostico_principal.trim() === '') {
+            errors.diagnostico_principal = "Diagnóstico Principal é obrigatório";
         }
         if (!data.grupo_patologias) {
             errors.grupo_patologias = "Grupo de Patologias é obrigatório";
@@ -295,16 +296,23 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
             <FormSection title="Dados Clínicos">
                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <Label htmlFor="diagnostico_lesao_principal">Diagnóstico/Lesão Principal <span className="text-red-500">*</span></Label>
-                        <Input 
-                            id="diagnostico_lesao_principal"
-                            value={data.diagnostico_lesao_principal || ''} 
-                            onChange={e => handleChange('diagnostico_lesao_principal', e.target.value)}
-                            className={validationErrors.diagnostico_lesao_principal ? 'border-red-500' : ''}
+                        <Label htmlFor="diagnostico_principal">Diagnóstico Principal (CID) <span className="text-red-500">*</span></Label>
+                        <CIDCombobox
+                            value={data.diagnostico_principal || ''} 
+                            onChange={v => handleChange('diagnostico_principal', v)}
+                            className={validationErrors.diagnostico_principal ? 'border-red-500' : ''}
                         />
-                        {validationErrors.diagnostico_lesao_principal && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.diagnostico_lesao_principal}</p>
+                        {validationErrors.diagnostico_principal && (
+                            <p className="text-xs text-red-500 mt-1">{validationErrors.diagnostico_principal}</p>
                         )}
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Label htmlFor="diagnostico_lesao_secundaria">Diagnóstico/Lesão Secundária</Label>
+                        <Input 
+                            id="diagnostico_lesao_secundaria"
+                            value={data.diagnostico_lesao_secundaria || ''} 
+                            onChange={e => handleChange('diagnostico_lesao_secundaria', e.target.value)}
+                        />
                     </div>
                     <div>
                         <Label htmlFor="grupo_patologias">Grupo de Patologias <span className="text-red-500">*</span></Label>
