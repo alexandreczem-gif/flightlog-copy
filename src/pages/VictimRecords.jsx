@@ -4,7 +4,7 @@ import { VictimRecord } from "@/entities/VictimRecord";
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stethoscope, UserPlus, Download } from 'lucide-react';
+import { Stethoscope, UserPlus, Download, Edit2, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -39,12 +39,14 @@ export default function VictimRecords() {
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const fileInputRef = React.useRef(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
             const user = await User.me();
+            setCurrentUser(user);
             setIsAdmin(user.role === 'admin');
             const allowedRoles = ["Administrador", "OSM"];
             if (!allowedRoles.includes(user.flight_log_role) && user.role !== 'admin') {
@@ -101,7 +103,8 @@ export default function VictimRecords() {
                     victim_age: preDetailed.idade,
                     victim_sex: preDetailed.sexo_paciente,
                     date: preDetailed.data,
-                    isPending: true
+                    isPending: true,
+                    created_by: preDetailed.created_by
                 });
             });
 
@@ -264,6 +267,26 @@ export default function VictimRecords() {
             console.error("Erro ao excluir registro:", error);
             alert("Ocorreu um erro ao excluir o registro.");
         }
+    };
+
+    const handleDeletePending = async (victimId) => {
+        const confirmDelete = window.confirm("Tem certeza que deseja excluir esta vítima pendente?");
+        if (!confirmDelete) return;
+
+        try {
+            await VictimRecord.delete(victimId);
+            await logAction('delete', 'VictimRecord', victimId, 'Vítima pendente excluída');
+            alert("Vítima excluída com sucesso!");
+            loadData();
+        } catch (error) {
+            console.error("Erro ao excluir vítima pendente:", error);
+            alert("Ocorreu um erro ao excluir a vítima.");
+        }
+    };
+
+    const canEditDelete = (victimCreatedBy) => {
+        if (!currentUser) return false;
+        return currentUser.role === 'admin' || currentUser.email === victimCreatedBy;
     };
 
     const handleExport = async () => {
@@ -470,7 +493,7 @@ export default function VictimRecords() {
                                <div className="divide-y divide-slate-100">
                                    {pendingVictims.map((victim, idx) => (
                                        <div key={`${victim.flight_log_id}_${victim.victim_index}_${idx}`} className="p-4 flex justify-between items-center hover:bg-slate-50">
-                                           <div>
+                                           <div className="flex-1">
                                                <p className="font-semibold">{victim.victim_name}</p>
                                                <p className="text-sm text-slate-500">
                                                    {victim.isPending ? (
@@ -492,13 +515,36 @@ export default function VictimRecords() {
                                                    </p>
                                                )}
                                            </div>
-                                           {!victim.isPending && (
-                                               <Button 
-                                                 onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
-                                               >
-                                                 Detalhar Atendimento
-                                               </Button>
-                                           )}
+                                           <div className="flex gap-2">
+                                               {victim.isPending && victim.id && canEditDelete(victim.created_by) && (
+                                                   <>
+                                                       <Button
+                                                           variant="outline"
+                                                           size="sm"
+                                                           onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
+                                                       >
+                                                           <Edit2 className="w-4 h-4 mr-1" />
+                                                           Editar
+                                                       </Button>
+                                                       <Button
+                                                           variant="outline"
+                                                           size="sm"
+                                                           onClick={() => handleDeletePending(victim.id)}
+                                                           className="text-red-600 hover:bg-red-50"
+                                                       >
+                                                           <Trash2 className="w-4 h-4 mr-1" />
+                                                           Excluir
+                                                       </Button>
+                                                   </>
+                                               )}
+                                               {!victim.isPending && (
+                                                   <Button 
+                                                     onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
+                                                   >
+                                                     Detalhar Atendimento
+                                                   </Button>
+                                               )}
+                                           </div>
                                        </div>
                                    ))}
                                </div>
