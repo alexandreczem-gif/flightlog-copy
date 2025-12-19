@@ -21,8 +21,9 @@ import ServiceRecords from './pages/ServiceRecords';
 import Tripulantes from './pages/Tripulantes';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
-import VictimRecords from './pages/VictimRecords';
 import ViewData from './pages/ViewData';
+import VictimRecords from './pages/VictimRecords';
+import Diagnosticos from './pages/Diagnosticos';
 import __Layout from './Layout.jsx';
 
 
@@ -50,8 +51,9 @@ export const PAGES = {
     "Tripulantes": Tripulantes,
     "UserManagement": UserManagement,
     "UserProfile": UserProfile,
-    "VictimRecords": VictimRecords,
     "ViewData": ViewData,
+    "VictimRecords": VictimRecords,
+    "Diagnosticos": Diagnosticos,
 }
 
 export const pagesConfig = {
