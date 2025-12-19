@@ -582,13 +582,35 @@ export default function VictimRecords() {
                                                    </p>
                                                )}
                                            </div>
-                                           {!victim.isPending && (
-                                               <Button 
-                                                 onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
-                                               >
-                                                 Detalhar Atendimento
-                                               </Button>
-                                           )}
+                                           <div className="flex gap-2">
+                                               {victim.isPending && (
+                                                   <>
+                                                       <Button 
+                                                           variant="outline"
+                                                           size="sm"
+                                                           onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
+                                                       >
+                                                           <Edit className="w-4 h-4 mr-1" />
+                                                           Editar
+                                                       </Button>
+                                                       <Button 
+                                                           variant="destructive"
+                                                           size="sm"
+                                                           onClick={() => setDeleteVictimId(victim.id)}
+                                                       >
+                                                           <Trash2 className="w-4 h-4 mr-1" />
+                                                           Excluir
+                                                       </Button>
+                                                   </>
+                                               )}
+                                               {!victim.isPending && (
+                                                   <Button 
+                                                     onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
+                                                   >
+                                                     Detalhar Atendimento
+                                                   </Button>
+                                               )}
+                                           </div>
                                        </div>
                                    ))}
                                </div>
