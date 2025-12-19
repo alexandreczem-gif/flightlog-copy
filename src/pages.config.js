@@ -23,6 +23,7 @@ import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VictimRecords from './pages/VictimRecords';
 import ViewData from './pages/ViewData';
+import Diagnosticos from './pages/Diagnosticos';
 import __Layout from './Layout.jsx';
 
 
@@ -52,6 +53,7 @@ export const PAGES = {
     "UserProfile": UserProfile,
     "VictimRecords": VictimRecords,
     "ViewData": ViewData,
+    "Diagnosticos": Diagnosticos,
 }
 
 export const pagesConfig = {
