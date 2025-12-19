@@ -171,7 +171,12 @@ export default function Diagnosticos() {
           return;
         }
 
-        await Promise.all(dataToImport.map(d => base44.entities.CID.create(d)));
+        // Importar em lotes de 50
+        const batchSize = 50;
+        for (let i = 0; i < dataToImport.length; i += batchSize) {
+          const batch = dataToImport.slice(i, i + batchSize);
+          await Promise.all(batch.map(d => base44.entities.CID.create(d)));
+        }
         alert(`${dataToImport.length} CIDs importados com sucesso!`);
         loadCids();
       } catch (error) {
@@ -188,8 +193,14 @@ export default function Diagnosticos() {
 
   const handleDeleteAll = async () => {
     try {
-      await Promise.all(cids.map(cid => base44.entities.CID.delete(cid.id)));
+      // Excluir em lotes de 50
+      const batchSize = 50;
+      for (let i = 0; i < cids.length; i += batchSize) {
+        const batch = cids.slice(i, i + batchSize);
+        await Promise.all(batch.map(cid => base44.entities.CID.delete(cid.id)));
+      }
       setShowDeleteAllDialog(false);
+      alert(`${cids.length} CIDs excluídos com sucesso!`);
       loadCids();
     } catch (error) {
       console.error("Erro ao excluir CIDs:", error);
