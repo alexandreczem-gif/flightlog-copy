@@ -4,11 +4,21 @@ import { VictimRecord } from "@/entities/VictimRecord";
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stethoscope, UserPlus, Download } from 'lucide-react';
+import { Stethoscope, UserPlus, Download, Edit, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { logAction } from "@/components/utils/logger";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import VictimRecordTable from '../components/data/VictimRecordTable';
 import VictimRecordFilters from '../components/data/VictimRecordFilters';
@@ -37,8 +47,10 @@ export default function VictimRecords() {
     const [filters, setFilters] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
+    const [isExportingSESA, setIsExportingSESA] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [deleteVictimId, setDeleteVictimId] = useState(null);
     const fileInputRef = React.useRef(null);
 
     const loadData = useCallback(async () => {
@@ -395,7 +407,97 @@ export default function VictimRecords() {
         };
 
         reader.readAsText(file);
-    };
+        };
+
+        const handleExportSESA = async () => {
+        setIsExportingSESA(true);
+        try {
+        const recordsToExport = filteredRecords.map(rec => {
+          const diagnostico_lesao_principal = rec.diagnostico_principal && rec.diagnostico_secundario
+            ? `${rec.diagnostico_principal} - ${rec.diagnostico_secundario}`
+            : rec.diagnostico_principal || rec.diagnostico_secundario || '';
+
+          return {
+            base: rec.base || '',
+            data: rec.data || '',
+            ocorrencia_samu: rec.ocorrencia_samu || '',
+            tipo_transporte: rec.tipo_transporte || '',
+            status_transporte: rec.status_transporte || '',
+            motivo_qta: rec.motivo_qta || '',
+            nome_paciente: rec.nome_paciente || '',
+            sexo_paciente: rec.sexo_paciente || '',
+            idade: rec.idade || '',
+            faixa_etaria: rec.faixa_etaria || '',
+            diagnostico_lesao_principal,
+            grupo_patologias: rec.grupo_patologias || '',
+            cidade_origem: rec.cidade_origem || '',
+            hospital_origem: rec.hospital_origem || '',
+            local_pouso_origem: rec.local_pouso_origem || '',
+            cidade_destino: rec.cidade_destino || '',
+            hospital_destino: rec.hospital_destino || '',
+            local_pouso_destino: rec.local_pouso_destino || '',
+            departure_time_1: rec.departure_time_1 || '',
+            arrival_time_1: rec.arrival_time_1 || '',
+            departure_time_2: rec.departure_time_2 || '',
+            arrival_time_2: rec.arrival_time_2 || '',
+            departure_time_3: rec.departure_time_3 || '',
+            arrival_time_3: rec.arrival_time_3 || '',
+            departure_time_4: rec.departure_time_4 || '',
+            arrival_time_4: rec.arrival_time_4 || '',
+            departure_time_5: rec.departure_time_5 || '',
+            arrival_time_5: rec.arrival_time_5 || '',
+            duracao_total_min: rec.duracao_total_min || '',
+            osm_1: rec.osm_1 || '',
+            osm_2: rec.osm_2 || '',
+            comandante: rec.comandante || '',
+            copiloto: rec.copiloto || '',
+            oat_1: rec.oat_1 || '',
+            aeronave: rec.aeronave || '',
+            diario_bordo_pagina: rec.diario_bordo_pagina || '',
+            observacoes: rec.observacoes || '',
+            suporte_ventilatorio: rec.suporte_ventilatorio || '',
+            uso_sedacao: rec.uso_sedacao || '',
+            uso_droga_vasoativa: rec.uso_droga_vasoativa || '',
+            glasgow: rec.glasgow || '',
+            transfusao: rec.transfusao || '',
+            transfusao_bolsas: rec.transfusao_bolsas || ''
+          };
+        });
+
+        const headers = Object.keys(recordsToExport[0] || {});
+        const csvContent = [
+          headers.join(','),
+          ...recordsToExport.map(rec => 
+            headers.map(h => `"${String(rec[h]).replace(/"/g, '""')}"`).join(',')
+          )
+        ].join('\n');
+
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `exportacao_sesa_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        } catch (error) {
+        console.error("Erro ao exportar para SESA:", error);
+        alert("Ocorreu um erro ao gerar o arquivo CSV.");
+        } finally {
+        setIsExportingSESA(false);
+        }
+        };
+
+        const handleDeletePendingVictim = async (victimId) => {
+        try {
+        await VictimRecord.delete(victimId);
+        await logAction('delete', 'VictimRecord', victimId, 'Vítima pendente excluída');
+        loadData();
+        } catch (error) {
+        console.error("Erro ao excluir vítima pendente:", error);
+        alert("Ocorreu um erro ao excluir a vítima.");
+        }
+        };
 
     return (
         <div className="min-h-screen p-4 md:p-8 bg-slate-50">
@@ -430,12 +532,16 @@ export default function VictimRecords() {
                                 >
                                     {isImporting ? 'Importando...' : 'Importar CSV'}
                                 </Button>
-                                <Button onClick={handleExport} disabled={isExporting || filteredRecords.length === 0}>
+                                <Button onClick={handleExport} disabled={isExporting || completedRecords.length === 0} variant="outline">
                                     <Download className="w-4 h-4 mr-2" />
-                                    {isExporting ? "Exportando..." : `Exportar Filtrados (${filteredRecords.length})`}
+                                    {isExporting ? "Exportando..." : `Exportar Todos (${completedRecords.length})`}
                                 </Button>
                             </>
                         )}
+                        <Button onClick={handleExportSESA} disabled={isExportingSESA || filteredRecords.length === 0}>
+                            <Download className="w-4 h-4 mr-2" />
+                            {isExportingSESA ? "Exportando..." : `Exportar para SESA (${filteredRecords.length})`}
+                        </Button>
                     </div>
                 </motion.div>
 
@@ -511,10 +617,32 @@ export default function VictimRecords() {
                         <CardContent className="p-0">
                             <VictimRecordTable records={filteredRecords} isLoading={isLoading} onDelete={handleDelete} />
                         </CardContent>
-                    </Card>
-                </motion.div>
+                        </Card>
+                        </motion.div>
 
-            </div>
-        </div>
-    );
-}
+                        <AlertDialog open={deleteVictimId !== null} onOpenChange={() => setDeleteVictimId(null)}>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        Tem certeza que deseja excluir esta vítima pré-detalhada? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                        onClick={() => {
+                          handleDeletePendingVictim(deleteVictimId);
+                          setDeleteVictimId(null);
+                        }} 
+                        className="bg-red-600 hover:bg-red-700"
+                        >
+                        Excluir
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                        </div>
+                        </div>
+                        );
+                        }
