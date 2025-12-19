@@ -94,12 +94,6 @@ const navigationItems = [
     adminOnly: true,
   },
   {
-    title: "Diagnósticos (CID)",
-    url: createPageUrl("Diagnosticos"),
-    icon: ClipboardList,
-    adminOnly: true,
-  },
-  {
     title: "Gerenciar Usuários",
     url: createPageUrl("UserManagement"),
     icon: Users,

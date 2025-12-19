@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Save, AlertCircle, Upload, X, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import CIDCombobox from './CIDCombobox';
 
 const BASE_OPTIONS = ["Operação Verão", "Curitiba-BPMOA", "Curitiba-PRF", "Londrina", "Maringá", "Ponta Grossa"];
 const TRANSPORTE_OPTIONS = ["Resgate", "Remoção", "Órgão", "Treinamento Operacional"];
@@ -53,8 +52,7 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
         sexo_paciente: '',
         idade: '',
         faixa_etaria: '',
-        diagnostico_principal: '',
-        diagnostico_secundario: '',
+        diagnostico_lesao_principal: '',
         grupo_patologias: '',
         grau_afogamento: 'NA',
         observacoes: '',
@@ -126,8 +124,8 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
         }
 
         // Validações clínicas
-        if (!data.diagnostico_principal || data.diagnostico_principal.trim() === '') {
-            errors.diagnostico_principal = "Diagnóstico Principal é obrigatório";
+        if (!data.diagnostico_lesao_principal || data.diagnostico_lesao_principal.trim() === '') {
+            errors.diagnostico_lesao_principal = "Diagnóstico/Lesão Principal é obrigatório";
         }
         if (!data.grupo_patologias) errors.grupo_patologias = "Grupo de Patologias é obrigatório";
         if (!data.suporte_ventilatorio) errors.suporte_ventilatorio = "Suporte Ventilatório é obrigatório";
@@ -324,20 +322,14 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
             <FormSection title="Dados Clínicos">
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <Label htmlFor="diagnostico_principal">Diagnóstico Principal (CID) <span className="text-red-500">*</span></Label>
-                        <CIDCombobox
-                            value={data.diagnostico_principal || ''} 
-                            onChange={v => handleChange('diagnostico_principal', v)}
-                        />
-                        {validationErrors.diagnostico_principal && <p className="text-xs text-red-500 mt-1">{validationErrors.diagnostico_principal}</p>}
-                    </div>
-                    <div className="lg:col-span-1">
-                        <Label htmlFor="diagnostico_secundario">Diagnóstico/Lesão Secundária</Label>
+                        <Label htmlFor="diagnostico_lesao_principal">Diagnóstico/Lesão Principal <span className="text-red-500">*</span></Label>
                         <Input 
-                            id="diagnostico_secundario"
-                            value={data.diagnostico_secundario || ''} 
-                            onChange={e => handleChange('diagnostico_secundario', e.target.value)}
+                            id="diagnostico_lesao_principal"
+                            value={data.diagnostico_lesao_principal || ''} 
+                            onChange={e => handleChange('diagnostico_lesao_principal', e.target.value)}
+                            className={validationErrors.diagnostico_lesao_principal ? 'border-red-500' : ''}
                         />
+                        {validationErrors.diagnostico_lesao_principal && <p className="text-xs text-red-500 mt-1">{validationErrors.diagnostico_lesao_principal}</p>}
                     </div>
                     <div>
                         <Label htmlFor="grupo_patologias">Grupo de Patologias <span className="text-red-500">*</span></Label>
