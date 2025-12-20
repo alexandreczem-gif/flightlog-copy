@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Upload, Download, Trash2, X } from 'lucide-react';
+import { Plus, Upload, Download, Trash2, X, Edit } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -28,10 +28,15 @@ export default function Diagnosticos() {
     const [cids, setCids] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddDialog, setShowAddDialog] = useState(false);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [editingCid, setEditingCid] = useState(null);
     const [newCategoria, setNewCategoria] = useState('');
+    const [editCategoria, setEditCategoria] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [importProgress, setImportProgress] = useState('');
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -93,14 +98,62 @@ export default function Diagnosticos() {
         }
     };
 
-    const handleDeleteAll = async () => {
-        if (!confirm('Tem certeza que deseja excluir TODOS os CIDs? Esta ação não pode ser desfeita.')) return;
+    const handleEdit = (cid) => {
+        setEditingCid(cid);
+        setEditCategoria(cid.categoria);
+        setShowEditDialog(true);
+    };
+
+    const handleUpdate = async () => {
+        if (!editCategoria.trim()) {
+            alert('Por favor, preencha a categoria.');
+            return;
+        }
+        setIsSaving(true);
         try {
-            await Promise.all(cids.map(cid => base44.entities.CID.delete(cid.id)));
+            await base44.entities.CID.update(editingCid.id, { categoria: editCategoria });
+            setShowEditDialog(false);
+            setEditingCid(null);
+            setEditCategoria('');
+            loadCids();
+        } catch (error) {
+            console.error("Erro ao atualizar CID:", error);
+            alert("Erro ao atualizar CID.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (!confirm(`Tem certeza que deseja excluir TODOS os ${cids.length} CIDs? Esta ação não pode ser desfeita.`)) return;
+        
+        setIsDeleting(true);
+        setImportProgress('Iniciando exclusão...');
+        
+        try {
+            const batchSize = 50;
+            let deleted = 0;
+            
+            for (let i = 0; i < cids.length; i += batchSize) {
+                const batch = cids.slice(i, i + batchSize);
+                setImportProgress(`Excluindo ${i + batch.length} de ${cids.length} registros...`);
+                
+                await Promise.all(batch.map(cid => base44.entities.CID.delete(cid.id)));
+                deleted += batch.length;
+                
+                // Pequeno delay para não sobrecarregar
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            alert(`${deleted} CIDs excluídos com sucesso!`);
             loadCids();
         } catch (error) {
             console.error("Erro ao excluir todos os CIDs:", error);
-            alert("Erro ao excluir todos os CIDs.");
+            alert("Erro ao excluir CIDs. Alguns registros podem não ter sido removidos.");
+            loadCids();
+        } finally {
+            setIsDeleting(false);
+            setImportProgress('');
         }
     };
 
@@ -143,7 +196,12 @@ export default function Diagnosticos() {
             try {
                 const text = event.target.result;
                 const lines = text.split('\n');
-                if (lines.length < 2) return;
+                if (lines.length < 2) {
+                    alert('Arquivo CSV vazio ou inválido.');
+                    setIsImporting(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
 
                 const dataToImport = [];
                 for (let i = 1; i < lines.length; i++) {
@@ -152,20 +210,43 @@ export default function Diagnosticos() {
                     if (categoria) dataToImport.push({ categoria });
                 }
 
+                if (dataToImport.length === 0) {
+                    alert('Nenhum registro válido encontrado no arquivo.');
+                    setIsImporting(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+
                 if (!confirm(`Importar ${dataToImport.length} registros?`)) {
                     setIsImporting(false);
                     if (fileInputRef.current) fileInputRef.current.value = '';
                     return;
                 }
 
-                await Promise.all(dataToImport.map(d => base44.entities.CID.create(d)));
-                alert(`${dataToImport.length} CIDs importados com sucesso!`);
+                // Processar em lotes para evitar timeout
+                const batchSize = 50;
+                let imported = 0;
+                
+                for (let i = 0; i < dataToImport.length; i += batchSize) {
+                    const batch = dataToImport.slice(i, i + batchSize);
+                    setImportProgress(`Importando ${i + batch.length} de ${dataToImport.length} registros...`);
+                    
+                    await Promise.all(batch.map(d => base44.entities.CID.create(d)));
+                    imported += batch.length;
+                    
+                    // Pequeno delay entre lotes
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                alert(`${imported} CIDs importados com sucesso!`);
                 loadCids();
             } catch (error) {
                 console.error('Erro na importação:', error);
-                alert('Erro ao processar arquivo.');
+                alert('Erro ao processar arquivo. Alguns registros podem não ter sido importados.');
+                loadCids();
             } finally {
                 setIsImporting(false);
+                setImportProgress('');
                 if (fileInputRef.current) fileInputRef.current.value = '';
             }
         };
@@ -189,7 +270,7 @@ export default function Diagnosticos() {
                             accept=".csv" 
                             className="hidden" 
                         />
-                        <Button onClick={handleImportClick} disabled={isImporting} variant="outline">
+                        <Button onClick={handleImportClick} disabled={isImporting || isDeleting} variant="outline">
                             <Upload className="w-4 h-4 mr-2" />
                             {isImporting ? 'Importando...' : 'Importar CSV'}
                         </Button>
@@ -197,9 +278,9 @@ export default function Diagnosticos() {
                             <Download className="w-4 h-4 mr-2" />
                             Exportar CSV
                         </Button>
-                        <Button onClick={handleDeleteAll} disabled={cids.length === 0} variant="outline" className="text-red-600 hover:text-red-800">
+                        <Button onClick={handleDeleteAll} disabled={cids.length === 0 || isDeleting || isImporting} variant="outline" className="text-red-600 hover:text-red-800">
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir Todos
+                            {isDeleting ? 'Excluindo...' : 'Excluir Todos'}
                         </Button>
                         <Button onClick={() => setShowAddDialog(true)} className="bg-red-700 hover:bg-red-800">
                             <Plus className="w-4 h-4 mr-2" />
@@ -207,6 +288,16 @@ export default function Diagnosticos() {
                         </Button>
                     </div>
                 </motion.div>
+
+                {(isImporting || isDeleting) && importProgress && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
+                        <Card className="bg-blue-50 border-blue-200">
+                            <CardContent className="p-4">
+                                <p className="text-sm text-blue-800 font-medium">{importProgress}</p>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                     <Card className="shadow-xl">
@@ -224,7 +315,7 @@ export default function Diagnosticos() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Categoria</TableHead>
-                                                <TableHead className="w-20">Ações</TableHead>
+                                                <TableHead className="w-32">Ações</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -232,14 +323,24 @@ export default function Diagnosticos() {
                                                 <TableRow key={cid.id}>
                                                     <TableCell>{cid.categoria}</TableCell>
                                                     <TableCell>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(cid.id)}
-                                                            className="text-red-600 hover:text-red-800"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleEdit(cid)}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDelete(cid.id)}
+                                                                className="text-red-600 hover:text-red-800"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -273,6 +374,37 @@ export default function Diagnosticos() {
                             </Button>
                             <Button onClick={handleAdd} disabled={isSaving}>
                                 {isSaving ? 'Salvando...' : 'Adicionar'}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar CID</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="edit-categoria">Categoria</Label>
+                            <Input
+                                id="edit-categoria"
+                                value={editCategoria}
+                                onChange={(e) => setEditCategoria(e.target.value)}
+                                placeholder="Ex: A00 - Cólera"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => {
+                                setShowEditDialog(false);
+                                setEditingCid(null);
+                                setEditCategoria('');
+                            }}>
+                                Cancelar
+                            </Button>
+                            <Button onClick={handleUpdate} disabled={isSaving}>
+                                {isSaving ? 'Salvando...' : 'Atualizar'}
                             </Button>
                         </div>
                     </div>
