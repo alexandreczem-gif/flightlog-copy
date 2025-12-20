@@ -374,7 +374,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         age: pendingVictimRecord.idade,
         life_code: '',
         drowning_grade: pendingVictimRecord.grau_afogamento || 'NA',
-        origin_city: pendingVictimRecord.cidade_origem || '',
+        origin_city: pendingVictimRecord.cidade_origem || formData.municipality || '',
         origin_city_special: '',
         origin_hospital: pendingVictimRecord.hospital_origem || '',
         origin_landing_site: pendingVictimRecord.local_pouso_origem || '',
@@ -480,6 +480,11 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.municipality) {
+      alert("Por favor, preencha o campo Município.");
+      return;
+    }
 
     if (!formData.mission_type && (!formData.mission_type_pm || formData.mission_type_pm === '_none_')) {
       alert("Por favor, selecione a Natureza da Missão (BM ou PM).");
@@ -733,11 +738,12 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
               )}
             </div>
             <div>
-              <Label htmlFor="municipality">Município</Label>
+              <Label htmlFor="municipality">Município *</Label>
               <MunicipalityCombobox
                 value={formData.municipality}
                 onChange={(v) => handleChange('municipality', v)}
                 placeholder="Digite o município..."
+                required
               />
             </div>
           </div>
