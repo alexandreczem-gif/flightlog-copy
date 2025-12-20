@@ -63,9 +63,9 @@ export default function VictimRecords() {
             
             setCompletedRecords(completed);
 
-            // Criar um Set de identificadores únicos de vítimas que já têm registro detalhado
+            // Criar um Set de identificadores únicos de vítimas que já têm registro (completo OU vinculado)
             const detailedVictimIds = new Set(
-                completed.map(r => `${r.flight_log_id}_${r.victim_index}`)
+                detailedRecords.map(r => `${r.flight_log_id}_${r.victim_index}`)
             );
 
             // Iterar sobre todos os voos e suas vítimas
@@ -74,8 +74,8 @@ export default function VictimRecords() {
                 if (flight.victims && Array.isArray(flight.victims) && flight.victims.length > 0) {
                     flight.victims.forEach((victim, index) => {
                         const victimId = `${flight.id}_${index}`;
-                        // Se esta vítima ainda não tem registro detalhado
-                        if (!detailedVictimIds.has(victimId) && victim.name) {
+                        // Se esta vítima ainda não tem registro detalhado E não é uma vítima pré-detalhada vinculada
+                        if (!detailedVictimIds.has(victimId) && victim.name && !victim.pending_victim_id) {
                             pending.push({
                                 flight_log_id: flight.id,
                                 victim_index: index,
@@ -91,7 +91,7 @@ export default function VictimRecords() {
                 }
             });
 
-            // Adicionar vítimas pré-detalhadas às pendentes
+            // Adicionar apenas vítimas pré-detalhadas que ainda estão pendentes de registro
             pendingPreDetailed.forEach(preDetailed => {
                 pending.push({
                     id: preDetailed.id,
