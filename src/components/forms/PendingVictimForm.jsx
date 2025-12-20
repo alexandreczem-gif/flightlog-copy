@@ -94,13 +94,19 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
 
     useEffect(() => {
         const fc = parseFloat(data.frequencia_cardiaca);
-        const pas = parseFloat(data.pressao_arterial_sistolica);
 
-        if (!isNaN(fc) && !isNaN(pas) && pas > 0) {
+        // Extrair PAS da string "XXX/XXX"
+        let pas = 0;
+        if (data.pressao_arterial_sistolica) {
+            const pasParts = String(data.pressao_arterial_sistolica).split('/');
+            pas = parseFloat(pasParts[0]) || 0;
+        }
+
+        if (!isNaN(fc) && fc > 0 && pas > 0) {
             const indice = (fc / pas).toFixed(2);
             setData(prev => ({ ...prev, indice_choque: parseFloat(indice) }));
-        } else if (data.indice_choque !== null && data.indice_choque !== undefined && data.indice_choque !== '') {
-            setData(prev => ({ ...prev, indice_choque: null }));
+        } else {
+            setData(prev => ({ ...prev, indice_choque: 0 }));
         }
     }, [data.frequencia_cardiaca, data.pressao_arterial_sistolica]);
 
@@ -444,7 +450,7 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
                             id="indice_choque"
                             type="number"
                             step="0.01"
-                            value={data.indice_choque || ''} 
+                            value={data.indice_choque || 0} 
                             readOnly
                             className="bg-slate-100"
                         />

@@ -84,16 +84,21 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
 
     // Calcular índice de choque automaticamente
     useEffect(() => {
-        const fc = parseFloat(data.frequencia_cardiaca);
-        const pas = parseFloat(data.pressao_arterial_sistolica);
+    const fc = parseFloat(data.frequencia_cardiaca);
 
-        if (!isNaN(fc) && !isNaN(pas) && pas > 0) {
-            const indice = (fc / pas).toFixed(2);
-            setData(prev => ({ ...prev, indice_choque: parseFloat(indice) }));
-        } else if (data.indice_choque !== null && data.indice_choque !== undefined && data.indice_choque !== '') {
-             // Clear indice_choque if inputs become invalid
-            setData(prev => ({ ...prev, indice_choque: null }));
-        }
+    // Extrair PAS da string "XXX/XXX"
+    let pas = 0;
+    if (data.pressao_arterial_sistolica) {
+        const pasParts = String(data.pressao_arterial_sistolica).split('/');
+        pas = parseFloat(pasParts[0]) || 0;
+    }
+
+    if (!isNaN(fc) && fc > 0 && pas > 0) {
+        const indice = (fc / pas).toFixed(2);
+        setData(prev => ({ ...prev, indice_choque: parseFloat(indice) }));
+    } else {
+        setData(prev => ({ ...prev, indice_choque: 0 }));
+    }
     }, [data.frequencia_cardiaca, data.pressao_arterial_sistolica]);
 
     const validateForm = () => {
@@ -419,13 +424,19 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                         </div>
                     )}
                     <div>
-                        <Label htmlFor="pressao_arterial_sistolica">Pressão Arterial Sistólica (mmHg) <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="pressao_arterial_sistolica">PA <span className="text-red-500">*</span></Label>
                         <Input 
                             id="pressao_arterial_sistolica"
-                            type="number" 
+                            type="text" 
                             value={data.pressao_arterial_sistolica || ''} 
-                            onChange={e => handleChange('pressao_arterial_sistolica', e.target.value)}
-                            placeholder="Ex: 120"
+                            onChange={e => {
+                                const value = e.target.value.replace(/[^0-9/]/g, '');
+                                const parts = value.split('/');
+                                if (parts.length <= 2 && parts.every(p => !p || /^\d{0,3}$/.test(p))) {
+                                    handleChange('pressao_arterial_sistolica', value);
+                                }
+                            }}
+                            placeholder="120/80"
                             className={validationErrors.pressao_arterial_sistolica ? 'border-red-500' : ''}
                         />
                         {validationErrors.pressao_arterial_sistolica && (
@@ -452,12 +463,12 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                             id="indice_choque"
                             type="number"
                             step="0.01"
-                            value={data.indice_choque || ''} 
+                            value={data.indice_choque || 0} 
                             readOnly
                             className="bg-slate-100"
                             placeholder="Calculado automaticamente"
                         />
-                        <p className="text-xs text-slate-500 mt-1">FC / PA Sistólica</p>
+                        <p className="text-xs text-slate-500 mt-1">FC / PAS</p>
                     </div>
                  </div>
             </FormSection>
@@ -660,8 +671,8 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                             className="border-blue-600 text-blue-600 hover:bg-blue-50"
                         >
                             <FileEdit className="w-4 h-4 mr-2" />
-                            Preencher RAM/RAE Online
-                        </Button>
+                            Preencher RAM/RAE Online (em desenvolvimento)
+                            </Button>
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
