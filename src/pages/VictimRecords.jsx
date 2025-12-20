@@ -45,7 +45,8 @@ export default function VictimRecords() {
         setIsLoading(true);
         try {
             const user = await User.me();
-            setIsAdmin(user.role === 'admin');
+            const userIsAdmin = user.role === 'admin' || user.flight_log_role === 'Administrador';
+            setIsAdmin(userIsAdmin);
             const allowedRoles = ["Administrador", "OSM", "Piloto", "OAT"];
             if (!allowedRoles.includes(user.flight_log_role) && user.role !== 'admin') {
                 navigate(createPageUrl("Dashboard"));
@@ -56,11 +57,19 @@ export default function VictimRecords() {
                 FlightLog.list('-date'),
                 VictimRecord.list('-created_date')
             ]);
-            
+
             // Separar registros completos e pendentes
-            const completed = detailedRecords.filter(r => !r.pending_registration);
+            let completed = detailedRecords.filter(r => !r.pending_registration);
             const pendingPreDetailed = detailedRecords.filter(r => r.pending_registration);
-            
+
+            // Filtrar últimos 10 dias para não-admins
+            if (!userIsAdmin) {
+                const tenDaysAgo = new Date();
+                tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+                const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0];
+                completed = completed.filter(r => r.data >= tenDaysAgoStr);
+            }
+
             setCompletedRecords(completed);
 
             // Criar um Set de identificadores únicos de vítimas que já têm registro (completo OU vinculado)
@@ -315,6 +324,61 @@ export default function VictimRecords() {
         }
     };
 
+    const handleExportSESA = async () => {
+        setIsExporting(true);
+        
+        const formatDuration = (minutes) => {
+            if (minutes === null || minutes === undefined || isNaN(minutes)) return '';
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        };
+        
+        try {
+            const recordsToExport = filteredRecords;
+            const sesaColumns = [
+                'base', 'data', 'ocorrencia_samu', 'tipo_transporte', 'status_transporte', 'motivo_qta',
+                'nome_paciente', 'sexo_paciente', 'idade', 'faixa_etaria', 'diagnostico_lesao_principal',
+                'grupo_patologias', 'cidade_origem', 'hospital_origem', 'local_pouso_origem',
+                'cidade_destino', 'hospital_destino', 'local_pouso_destino', 'departure_time_1',
+                'arrival_time_1', 'departure_time_2', 'arrival_time_2', 'departure_time_3',
+                'arrival_time_3', 'departure_time_4', 'arrival_time_4', 'departure_time_5',
+                'arrival_time_5', 'duracao_total_min', 'osm_1', 'osm_2', 'comandante', 'copiloto',
+                'oat_1', 'aeronave', 'diario_bordo_pagina', 'observacoes', 'suporte_ventilatorio',
+                'uso_sedacao', 'uso_droga_vasoativa', 'glasgow', 'transfusao', 'transfusao_bolsas'
+            ];
+            
+            const csvContent = [
+                sesaColumns.join(','),
+                ...recordsToExport.map(rec => 
+                    sesaColumns.map(col => {
+                        let value = rec[col] !== undefined && rec[col] !== null ? String(rec[col]) : '';
+                        
+                        if (col === 'duracao_total_min' && rec[col] !== undefined && rec[col] !== null) {
+                            value = formatDuration(rec[col]);
+                        }
+                        
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }).join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sesa_vitimas_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Erro ao exportar dados SESA:", error);
+            alert("Ocorreu um erro ao gerar o arquivo CSV SESA.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const handleImportClick = () => {
         fileInputRef.current.click();
     };
@@ -412,6 +476,15 @@ export default function VictimRecords() {
                         >
                             <UserPlus className="w-4 h-4 mr-2" />
                             Adicionar Vítima Não Registrada
+                        </Button>
+                        <Button 
+                            onClick={handleExportSESA} 
+                            disabled={isExporting || filteredRecords.length === 0}
+                            variant="outline"
+                            className="border-green-600 text-green-600 hover:bg-green-50"
+                        >
+                            <Download className="w-4 h-4 mr-2" />
+                            {isExporting ? "Exportando..." : "Exportar CSV SESA"}
                         </Button>
                         {isAdmin && (
                             <>
