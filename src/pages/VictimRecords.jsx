@@ -46,7 +46,7 @@ export default function VictimRecords() {
         try {
             const user = await User.me();
             setIsAdmin(user.role === 'admin');
-            const allowedRoles = ["Administrador", "OSM"];
+            const allowedRoles = ["Administrador", "OSM", "Piloto", "OAT"];
             if (!allowedRoles.includes(user.flight_log_role) && user.role !== 'admin') {
                 navigate(createPageUrl("Dashboard"));
                 return;

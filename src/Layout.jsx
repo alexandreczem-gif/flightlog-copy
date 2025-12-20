@@ -181,9 +181,9 @@ export default function Layout({ children, currentPageName }) {
       return false;
     }
 
-    // Piloto e OAT: acesso a quase tudo exceto vítimas, aeródromos, hospitais e gestão de usuários
+    // Piloto e OAT: acesso a quase tudo exceto aeródromos, hospitais e gestão de usuários
     if (userRole === 'Piloto' || userRole === 'OAT') {
-      const blocked = ["Vítimas/Pacientes Atendidos", "Aeródromos", "Hospitais", "Gerenciar Usuários"];
+      const blocked = ["Aeródromos", "Hospitais", "Gerenciar Usuários"];
       return !blocked.includes(item.title);
     }
 
