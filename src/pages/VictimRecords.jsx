@@ -4,7 +4,7 @@ import { VictimRecord } from "@/entities/VictimRecord";
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stethoscope, UserPlus, Download } from 'lucide-react';
+import { Stethoscope, UserPlus, Download, Pencil, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -454,7 +454,7 @@ export default function VictimRecords() {
                                <div className="divide-y divide-slate-100">
                                    {pendingVictims.map((victim, idx) => (
                                        <div key={`${victim.flight_log_id}_${victim.victim_index}_${idx}`} className="p-4 flex justify-between items-center hover:bg-slate-50">
-                                           <div>
+                                           <div className="flex-1">
                                                <p className="font-semibold">{victim.victim_name}</p>
                                                <p className="text-sm text-slate-500">
                                                    {victim.isPending ? (
@@ -476,7 +476,29 @@ export default function VictimRecords() {
                                                    </p>
                                                )}
                                            </div>
-                                           {!victim.isPending && (
+                                           {victim.isPending ? (
+                                               <div className="flex gap-2">
+                                                   <Button 
+                                                       size="sm"
+                                                       variant="outline"
+                                                       onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
+                                                   >
+                                                       Editar
+                                                   </Button>
+                                                   <Button 
+                                                       size="sm"
+                                                       variant="outline"
+                                                       className="text-red-600 hover:bg-red-50"
+                                                       onClick={async () => {
+                                                           if (window.confirm(`Tem certeza que deseja excluir o pré-detalhamento de ${victim.victim_name}?`)) {
+                                                               await handleDelete(victim.id);
+                                                           }
+                                                       }}
+                                                   >
+                                                       Excluir
+                                                   </Button>
+                                               </div>
+                                           ) : (
                                                <Button 
                                                  onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
                                                >
