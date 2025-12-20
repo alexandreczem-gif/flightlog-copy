@@ -423,12 +423,19 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
                         </div>
                     )}
                     <div>
-                        <Label htmlFor="pressao_arterial_sistolica">PA Sistólica (mmHg) <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="pressao_arterial_sistolica">PA <span className="text-red-500">*</span></Label>
                         <Input 
                             id="pressao_arterial_sistolica"
-                            type="number" 
+                            type="text" 
                             value={data.pressao_arterial_sistolica || ''} 
-                            onChange={e => handleChange('pressao_arterial_sistolica', e.target.value)}
+                            onChange={e => {
+                                const value = e.target.value.replace(/[^0-9/]/g, '');
+                                const parts = value.split('/');
+                                if (parts.length <= 2 && parts.every(p => !p || /^\d{0,3}$/.test(p))) {
+                                    handleChange('pressao_arterial_sistolica', value);
+                                }
+                            }}
+                            placeholder="120/80"
                             className={validationErrors.pressao_arterial_sistolica ? 'border-red-500' : ''}
                         />
                         {validationErrors.pressao_arterial_sistolica && <p className="text-xs text-red-500 mt-1">{validationErrors.pressao_arterial_sistolica}</p>}
