@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, AlertCircle, Upload, X, FileText } from 'lucide-react';
+import { Save, AlertCircle, Upload, X, FileText, FileEdit } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import RAMRAEFormDialog from '../ramrae/RAMRAEFormDialog';
 
 import CityCombobox from './CityCombobox';
 import HospitalCombobox from './HospitalCombobox';
@@ -35,6 +36,7 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
     const [isUploadingFrente, setIsUploadingFrente] = useState(false);
     const [isUploadingVerso, setIsUploadingVerso] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [showRAMRAEDialog, setShowRAMRAEDialog] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -200,6 +202,11 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
         }
         
         onSave(data);
+    };
+
+    const handleRAMRAESave = (ramraeData) => {
+        setData(ramraeData);
+        setShowRAMRAEDialog(false);
     };
 
     const isOSM = currentUser && currentUser.flight_log_role === 'OSM' && currentUser.role !== 'admin';
@@ -645,6 +652,17 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
 
             <FormSection title="RAS - RAM/RAE (Relatório de Atendimento)">
                 <div className="space-y-6">
+                    <div className="flex justify-end mb-4">
+                        <Button 
+                            type="button"
+                            onClick={() => setShowRAMRAEDialog(true)}
+                            variant="outline"
+                            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                        >
+                            <FileEdit className="w-4 h-4 mr-2" />
+                            Preencher RAM/RAE Online
+                        </Button>
+                    </div>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
                             <Label>Arquivo Frente (Opcional)</Label>
@@ -735,6 +753,13 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                     {isSaving ? "Salvando..." : "Salvar Detalhamento"}
                 </Button>
             </div>
+
+            <RAMRAEFormDialog 
+                open={showRAMRAEDialog}
+                onOpenChange={setShowRAMRAEDialog}
+                victimData={data}
+                onSave={handleRAMRAESave}
+            />
         </form>
     );
 }
