@@ -54,6 +54,9 @@ export default function MapaDaForca() {
     tasa: ""
   });
 
+  const [showInitialFuel, setShowInitialFuel] = useState(false);
+  const [suggestedFuel, setSuggestedFuel] = useState(null);
+
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
@@ -187,9 +190,62 @@ export default function MapaDaForca() {
     }
   };
 
+  const checkPreviousFuel = async () => {
+    if (!uaaForm.name) {
+      alert("Preencha a placa da UAA primeiro");
+      return;
+    }
+
+    try {
+      // Buscar último serviço desta UAA
+      const allServices = await base44.entities.DailyService.filter({ 
+        type: 'uaa', 
+        name: uaaForm.name.toUpperCase() 
+      });
+      
+      // Ordenar por data decrescente e pegar o mais recente com final_fuel
+      const servicesWithFuel = allServices
+        .filter(s => s.final_fuel !== null && s.final_fuel !== undefined)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      if (servicesWithFuel.length > 0) {
+        const lastService = servicesWithFuel[0];
+        setSuggestedFuel(lastService.final_fuel);
+        setUaaForm({...uaaForm, initial_fuel: lastService.final_fuel.toString()});
+        const confirmed = confirm(
+          `Último combustível final da UAA ${uaaForm.name}:\n${lastService.final_fuel.toFixed(0)} L (${format(new Date(lastService.date), 'dd/MM/yyyy')})\n\n` +
+          `Deseja usar este valor como combustível inicial?\n` +
+          `(Você poderá alterar o valor se necessário)`
+        );
+        
+        if (!confirmed) {
+          setUaaForm({...uaaForm, initial_fuel: ""});
+        }
+      } else {
+        alert(`Nenhum serviço anterior encontrado para a UAA ${uaaForm.name}.\nPor favor, informe o combustível inicial.`);
+      }
+      
+      setShowInitialFuel(true);
+    } catch (error) {
+      console.error("Erro ao buscar combustível anterior:", error);
+      alert("Erro ao buscar dados anteriores. Por favor, informe o combustível inicial.");
+      setShowInitialFuel(true);
+    }
+  };
+
   const handleAddUAA = async () => {
     if (!uaaForm.name || !uaaForm.base || !uaaForm.start_time) {
       alert("Preencha os campos obrigatórios (Placa, Base, Horário)");
+      return;
+    }
+
+    if (!showInitialFuel) {
+      await checkPreviousFuel();
+      return;
+    }
+
+    if (!uaaForm.initial_fuel) {
+      alert("Preencha o combustível inicial");
       return;
     }
 
@@ -220,7 +276,9 @@ export default function MapaDaForca() {
         await logAction('create', 'DailyService', created.id, `Lançamento UAA ${data.name}`);
       }
       
-      setUaaForm({ ...uaaForm, name: "", initial_fuel: "", drained_fuel: "", tasa: "" });
+      setUaaForm({ name: "", base: "", start_time: "07:30", end_time: "18:30", initial_fuel: "", drained_fuel: "", tasa: "" });
+      setShowInitialFuel(false);
+      setSuggestedFuel(null);
       loadData();
       alert("UAA lançada com sucesso!");
     } catch (error) {
@@ -447,28 +505,54 @@ export default function MapaDaForca() {
                   <TabsContent value="uaa" className="space-y-4">
                      <div>
                       <Label>Placa da UAA</Label>
-                      <Input value={uaaForm.name} onChange={e => setUaaForm({...uaaForm, name: e.target.value})} placeholder="ABC-1234" className="uppercase" />
+                      <Input 
+                        value={uaaForm.name} 
+                        onChange={e => {
+                          setUaaForm({...uaaForm, name: e.target.value});
+                          setShowInitialFuel(false);
+                          setSuggestedFuel(null);
+                        }} 
+                        placeholder="ABC-1234" 
+                        className="uppercase"
+                        disabled={showInitialFuel}
+                      />
                     </div>
                     <div>
                       <Label>Base</Label>
-                      <Select value={uaaForm.base} onValueChange={v => setUaaForm({...uaaForm, base: v})}>
+                      <Select value={uaaForm.base} onValueChange={v => setUaaForm({...uaaForm, base: v})} disabled={showInitialFuel}>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>{BASE_OPTIONS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div><Label>Início</Label><Input type="time" value={uaaForm.start_time} onChange={e => setUaaForm({...uaaForm, start_time: e.target.value})} /></div>
-                      <div><Label>Término</Label><Input type="time" value={uaaForm.end_time} onChange={e => setUaaForm({...uaaForm, end_time: e.target.value})} /></div>
+                      <div><Label>Início</Label><Input type="time" value={uaaForm.start_time} onChange={e => setUaaForm({...uaaForm, start_time: e.target.value})} disabled={showInitialFuel} /></div>
+                      <div><Label>Término</Label><Input type="time" value={uaaForm.end_time} onChange={e => setUaaForm({...uaaForm, end_time: e.target.value})} disabled={showInitialFuel} /></div>
                     </div>
-                    <div>
-                      <Label>Combustível no Início do Serviço (L)</Label>
-                      <Input type="number" value={uaaForm.initial_fuel} onChange={e => setUaaForm({...uaaForm, initial_fuel: e.target.value})} placeholder="Ex: 2000" />
-                    </div>
-                    <div>
-                      <Label>Combustível Drenado (L)</Label>
-                      <Input type="number" value={uaaForm.drained_fuel} onChange={e => setUaaForm({...uaaForm, drained_fuel: e.target.value})} placeholder="Ex: 50" />
-                      <p className="text-xs text-slate-500 mt-1">Será debitado do remanescente</p>
-                    </div>
+                    
+                    {showInitialFuel && (
+                      <>
+                        <div>
+                          <Label>Combustível no Início do Serviço (L) *</Label>
+                          <Input 
+                            type="number" 
+                            value={uaaForm.initial_fuel} 
+                            onChange={e => setUaaForm({...uaaForm, initial_fuel: e.target.value})} 
+                            placeholder="Ex: 2000"
+                            className={suggestedFuel ? "border-green-500" : ""}
+                          />
+                          {suggestedFuel && (
+                            <p className="text-xs text-green-600 mt-1">
+                              ✓ Valor sugerido baseado no último serviço
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label>Combustível Drenado (L)</Label>
+                          <Input type="number" value={uaaForm.drained_fuel} onChange={e => setUaaForm({...uaaForm, drained_fuel: e.target.value})} placeholder="Ex: 50" />
+                          <p className="text-xs text-slate-500 mt-1">Será debitado do remanescente</p>
+                        </div>
+                      </>
+                    )}
                     
                     <div className="border-t pt-4 mt-4">
                       <Label className="font-semibold text-slate-700">TASA</Label>
@@ -482,8 +566,22 @@ export default function MapaDaForca() {
                     </div>
 
                     <Button onClick={handleAddUAA} disabled={isSaving} className="w-full bg-blue-600 hover:bg-blue-700">
-                      <Plus className="w-4 h-4 mr-2" /> Lançar UAA
+                      <Plus className="w-4 h-4 mr-2" /> {showInitialFuel ? 'Lançar UAA' : 'Continuar'}
                     </Button>
+                    
+                    {showInitialFuel && (
+                      <Button 
+                        onClick={() => {
+                          setShowInitialFuel(false);
+                          setSuggestedFuel(null);
+                          setUaaForm({...uaaForm, initial_fuel: "", drained_fuel: ""});
+                        }} 
+                        variant="outline" 
+                        className="w-full"
+                      >
+                        Voltar
+                      </Button>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
