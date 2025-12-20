@@ -5,7 +5,6 @@ import Cidades from './pages/Cidades';
 import CreateForm from './pages/CreateForm';
 import DailyService from './pages/DailyService';
 import Dashboard from './pages/Dashboard';
-import Diagnosticos from './pages/Diagnosticos';
 import EditDailyService from './pages/EditDailyService';
 import EditFlightLog from './pages/EditFlightLog';
 import EditUserProfile from './pages/EditUserProfile';
@@ -35,7 +34,6 @@ export const PAGES = {
     "CreateForm": CreateForm,
     "DailyService": DailyService,
     "Dashboard": Dashboard,
-    "Diagnosticos": Diagnosticos,
     "EditDailyService": EditDailyService,
     "EditFlightLog": EditFlightLog,
     "EditUserProfile": EditUserProfile,

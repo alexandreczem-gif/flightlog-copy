@@ -4,7 +4,7 @@ import { VictimRecord } from "@/entities/VictimRecord";
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stethoscope, UserPlus, Download, Edit, Trash2 } from 'lucide-react';
+import { Stethoscope, UserPlus, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -315,47 +315,6 @@ export default function VictimRecords() {
         }
     };
 
-    const handleExportSESA = async () => {
-        setIsExporting(true);
-        try {
-            const sesaHeaders = ['base', 'data', 'ocorrencia_samu', 'tipo_transporte', 'status_transporte', 'motivo_qta', 'nome_paciente', 'sexo_paciente', 'idade', 'faixa_etaria', 'diagnostico_lesao_principal', 'grupo_patologias', 'cidade_origem', 'hospital_origem', 'local_pouso_origem', 'cidade_destino', 'hospital_destino', 'local_pouso_destino', 'departure_time_1', 'arrival_time_1', 'departure_time_2', 'arrival_time_2', 'departure_time_3', 'arrival_time_3', 'departure_time_4', 'arrival_time_4', 'departure_time_5', 'arrival_time_5', 'duracao_total_min', 'osm_1', 'osm_2', 'comandante', 'copiloto', 'oat_1', 'aeronave', 'diario_bordo_pagina', 'observacoes', 'suporte_ventilatorio', 'uso_sedacao', 'uso_droga_vasoativa', 'glasgow', 'transfusao', 'transfusao_bolsas'];
-
-            const csvContent = [
-                sesaHeaders.join(','),
-                ...filteredRecords.map(rec => {
-                    // Concatenar diagnóstico principal e secundária com hífen
-                    const diagnostico = [rec.diagnostico_principal, rec.diagnostico_lesao_secundaria]
-                        .filter(d => d && d.trim())
-                        .join(' - ');
-
-                    return sesaHeaders.map(header => {
-                        let value = '';
-                        if (header === 'diagnostico_lesao_principal') {
-                            value = diagnostico;
-                        } else {
-                            value = rec[header] !== undefined && rec[header] !== null ? String(rec[header]) : '';
-                        }
-                        return `"${value.replace(/"/g, '""')}"`;
-                    }).join(',');
-                })
-            ].join('\n');
-
-            const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `export_sesa_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (error) {
-            console.error("Erro ao exportar para SESA:", error);
-            alert("Erro ao exportar para SESA.");
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
     const handleImportClick = () => {
         fileInputRef.current.click();
     };
@@ -471,13 +430,9 @@ export default function VictimRecords() {
                                 >
                                     {isImporting ? 'Importando...' : 'Importar CSV'}
                                 </Button>
-                                <Button onClick={handleExport} disabled={isExporting || filteredRecords.length === 0} variant="outline">
+                                <Button onClick={handleExport} disabled={isExporting || filteredRecords.length === 0}>
                                     <Download className="w-4 h-4 mr-2" />
                                     {isExporting ? "Exportando..." : `Exportar Filtrados (${filteredRecords.length})`}
-                                </Button>
-                                <Button onClick={handleExportSESA} disabled={isExporting || filteredRecords.length === 0} className="bg-green-600 hover:bg-green-700">
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Exportar para SESA
                                 </Button>
                             </>
                         )}
@@ -514,41 +469,21 @@ export default function VictimRecords() {
                                                    )}
                                                    {victim.victim_age && ` - ${victim.victim_age} anos`}
                                                    {victim.victim_sex && victim.victim_sex !== 'NA' && ` - ${victim.victim_sex === 'M' ? 'Masculino' : 'Feminino'}`}
-                                                   </p>
-                                                   {!victim.isPending && victim.aircraft && (
+                                               </p>
+                                               {!victim.isPending && victim.aircraft && (
                                                    <p className="text-xs text-slate-400">
                                                        Aeronave: {victim.aircraft}
                                                    </p>
-                                                   )}
-                                                   </div>
-                                                   {!victim.isPending ? (
-                                                   <Button 
-                                                   onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
-                                                   >
-                                                   Detalhar Atendimento
-                                                   </Button>
-                                                   ) : (
-                                                   <div className="flex gap-2">
-                                                   <Button 
-                                                       variant="outline"
-                                                       size="sm"
-                                                       onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
-                                                   >
-                                                       <Edit className="w-4 h-4 mr-1" />
-                                                       Editar
-                                                   </Button>
-                                                   <Button 
-                                                       variant="outline"
-                                                       size="sm"
-                                                       onClick={() => handleDelete(victim.id)}
-                                                       className="text-red-600 hover:text-red-800"
-                                                   >
-                                                       <Trash2 className="w-4 h-4 mr-1" />
-                                                       Excluir
-                                                   </Button>
-                                                   </div>
-                                                   )}
-                                                   </div>
+                                               )}
+                                           </div>
+                                           {!victim.isPending && (
+                                               <Button 
+                                                 onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
+                                               >
+                                                 Detalhar Atendimento
+                                               </Button>
+                                           )}
+                                       </div>
                                    ))}
                                </div>
                            ) : (
