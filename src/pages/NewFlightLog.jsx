@@ -191,7 +191,7 @@ export default function NewFlightLog() {
               const year = new Date(dataToSave.date).getFullYear();
               const month = new Date(dataToSave.date).toLocaleString('pt-BR', { month: 'long' });
               
-              await base44.entities.VictimRecord.update(victim.pending_victim_id, {
+              const victimUpdateData = {
                 flight_log_id: createdLog.id,
                 victim_index: i,
                 mission_id: nextMissionId,
@@ -224,7 +224,19 @@ export default function NewFlightLog() {
                 cidade_destino: victim.destination_city || '',
                 hospital_destino: victim.destination_hospital || '',
                 local_pouso_destino: victim.destination_landing_site || ''
-              });
+              };
+              
+              const currentUser = await base44.auth.me();
+              if (currentUser.role === 'admin' || currentUser.flight_log_role === 'Administrador') {
+                await base44.entities.VictimRecord.update(victim.pending_victim_id, victimUpdateData);
+              } else {
+                // Para Piloto/OAT que não criaram o registro original, deletar o pending e criar um novo
+                await base44.entities.VictimRecord.delete(victim.pending_victim_id);
+                await base44.entities.VictimRecord.create({
+                  ...victimUpdateData,
+                  pending_registration: false
+                });
+              }
             }
           }
         }
