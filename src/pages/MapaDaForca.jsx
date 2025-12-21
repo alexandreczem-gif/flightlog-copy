@@ -76,7 +76,7 @@ export default function MapaDaForca() {
     setIsLoading(true);
     try {
       const [services, tripulantesList, abastecimentos] = await Promise.all([
-        base44.entities.DailyService.filter({ date: todayStr }),
+        base44.entities.DailyService.filter({ status: 'active' }),
         base44.entities.Tripulante.list(),
         base44.entities.Abastecimento.filter({ date: todayStr })
       ]);
