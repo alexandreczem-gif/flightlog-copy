@@ -182,6 +182,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   const [cities, setCities] = useState([]);
   const [availableBases, setAvailableBases] = useState([]);
   const [pendingVictims, setPendingVictims] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -258,6 +259,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         const selectedService = filteredAircraft.find(fa => fa.service && fa.service.id === value);
         if (selectedService && selectedService.service) {
           const svc = selectedService.service;
+          setSelectedServiceId(value);
           // Preencher automaticamente com dados do mapa da força
           setFormData({ 
             ...formData, 
@@ -692,7 +694,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
               <Label htmlFor="aircraft">Aeronave *</Label>
               {missionInOperation ? (
                 // Missão em escala regular: usar aeronaves do mapa da força
-                <Select value={formData.aircraft} onValueChange={(v) => handleChange('aircraft', v)} required>
+                <Select value={selectedServiceId} onValueChange={(v) => handleChange('aircraft', v)} required>
                   <SelectTrigger id="aircraft">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
