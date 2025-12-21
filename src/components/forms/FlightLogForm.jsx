@@ -226,9 +226,9 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
       return;
     }
 
-    // Se marcada, buscar aeronaves ativas no mapa da força (independente da data)
+    // Se marcada, mostrar aeronaves do mapa da força da data selecionada
     if (dailyServiceData && Array.isArray(dailyServiceData)) {
-      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft' && s.status === 'active');
+      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
       
       if (aircraftServices.length > 0) {
         const aircraftList = aircraftServices.map(svc => ({
