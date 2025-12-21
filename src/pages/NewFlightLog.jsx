@@ -105,36 +105,11 @@ export default function NewFlightLog() {
     }
   }, [nextMissionId, isLoadingMissionId, availableAircraft, selectedDate]);
 
-  // Filter aircraft based on mission type and date
+  // Set available aircraft options
   useEffect(() => {
-    const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"];
-    
-    // Caixa desmarcada: mostrar todas as aeronaves fixas
-    if (!missionInOperation) {
-      setFilteredAircraft(AIRCRAFT_OPTIONS.map(a => ({ label: a, value: a })));
-      return;
-    }
-
-    // Caixa marcada: buscar aeronaves do mapa da força para a data selecionada
-    if (dailyServiceData && Array.isArray(dailyServiceData)) {
-      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
-      
-      if (aircraftServices.length > 0) {
-        // Aeronaves encontradas para a data
-        const aircraftList = aircraftServices.map(svc => ({
-          label: `${svc.name} - Equipe ${svc.team}`,
-          value: svc.name,
-          service: svc
-        }));
-        setFilteredAircraft(aircraftList);
-      } else {
-        // Nenhuma aeronave encontrada para a data
-        setFilteredAircraft([]);
-      }
-    } else {
-      setFilteredAircraft([]);
-    }
-  }, [dailyServiceData, missionInOperation]);
+    const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 01", "Falcão 03", "Falcão 04", "Falcão 07", "Falcão 08", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"];
+    setFilteredAircraft(AIRCRAFT_OPTIONS.map(a => ({ label: a, value: a })));
+  }, []);
 
   const handleAircraftChange = (aircraft) => {
     // Logic moved to form or handled via filteredAircraft
