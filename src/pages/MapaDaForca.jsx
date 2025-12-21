@@ -607,7 +607,7 @@ export default function MapaDaForca() {
                 <div key={base} className="space-y-3">
                   <h3 className="font-semibold text-slate-700 border-b pb-2">{base}</h3>
                   {baseServices.map(service => (
-                    <Card key={service.id} className={`border-l-4 ${service.status === 'completed' ? 'border-l-green-500 opacity-75' : 'border-l-blue-500'}`}>
+                    <Card key={service.id} className={`border-l-4 ${service.status === 'completed' ? 'border-l-green-500 opacity-75' : service.date < todayStr ? 'border-l-red-500' : 'border-l-blue-500'}`}>
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-4">
                           <div>
@@ -619,6 +619,10 @@ export default function MapaDaForca() {
                             </div>
                             <p className="text-xs text-slate-500 mt-1">
                               {service.start_time} - {service.end_time}
+                            </p>
+                            <p className={`text-xs font-semibold mt-1 ${service.date < todayStr ? 'text-red-600' : 'text-slate-600'}`}>
+                              Data: {format(new Date(service.date), 'dd/MM/yyyy')}
+                              {service.date < todayStr && ' ⚠️'}
                             </p>
                             {service.type === 'aircraft' && (
                               <p className="text-xs text-slate-600 mt-1">
