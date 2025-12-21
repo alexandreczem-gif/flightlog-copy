@@ -226,23 +226,30 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
       return;
     }
 
-    if (dailyServiceData && Array.isArray(dailyServiceData) && !isHistoricalFlight) {
-      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft' && s.status !== 'completed');
-      const aircraftList = aircraftServices.map(svc => ({
-        label: `${svc.name} - Equipe ${svc.team}`,
-        value: svc.name,
-        service: svc
-      }));
-      setFilteredAircraft(aircraftList);
+    // Se marcada, buscar aeronaves ativas no mapa da força (independente da data)
+    if (dailyServiceData && Array.isArray(dailyServiceData)) {
+      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft' && s.status === 'active');
       
-      // Extrair bases únicas do mapa da força
-      const bases = [...new Set(dailyServiceData.filter(s => s.type === 'aircraft').map(s => s.base))];
-      setAvailableBases(bases);
+      if (aircraftServices.length > 0) {
+        const aircraftList = aircraftServices.map(svc => ({
+          label: `${svc.name} - Equipe ${svc.team}`,
+          value: svc.name,
+          service: svc
+        }));
+        setFilteredAircraft(aircraftList);
+        
+        // Extrair bases únicas do mapa da força
+        const bases = [...new Set(aircraftServices.map(s => s.base))];
+        setAvailableBases(bases);
+      } else {
+        setFilteredAircraft([]);
+        setAvailableBases([]);
+      }
     } else {
       setFilteredAircraft([]);
       setAvailableBases([]);
     }
-  }, [dailyServiceData, isHistoricalFlight, missionInOperation]);
+  }, [dailyServiceData, missionInOperation]);
 
   useEffect(() => {
     if (missionId && missionId !== formData.mission_id) {
