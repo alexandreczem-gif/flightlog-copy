@@ -621,7 +621,7 @@ export default function MapaDaForca() {
                               {service.start_time} - {service.end_time}
                             </p>
                             <p className={`text-xs font-semibold mt-1 ${service.date < todayStr ? 'text-red-600' : 'text-slate-600'}`}>
-                              Data: {format(new Date(service.date), 'dd/MM/yyyy')}
+                              Data: {format(new Date(service.date + 'T12:00:00'), 'dd/MM/yyyy')}
                               {service.date < todayStr && ' ⚠️'}
                             </p>
                             {service.type === 'aircraft' && (
