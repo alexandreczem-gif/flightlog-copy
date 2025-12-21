@@ -14,7 +14,6 @@ import FillForms from './pages/FillForms';
 import FlightLogs from './pages/FlightLogs';
 import Hospitais from './pages/Hospitais';
 import MapaDaForca from './pages/MapaDaForca';
-import NewFlightLog from './pages/NewFlightLog';
 import NewPendingVictim from './pages/NewPendingVictim';
 import NewVictimRecord from './pages/NewVictimRecord';
 import ServiceRecords from './pages/ServiceRecords';
@@ -23,6 +22,7 @@ import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
 import VictimRecords from './pages/VictimRecords';
 import ViewData from './pages/ViewData';
+import NewFlightLog from './pages/NewFlightLog';
 import __Layout from './Layout.jsx';
 
 
@@ -43,7 +43,6 @@ export const PAGES = {
     "FlightLogs": FlightLogs,
     "Hospitais": Hospitais,
     "MapaDaForca": MapaDaForca,
-    "NewFlightLog": NewFlightLog,
     "NewPendingVictim": NewPendingVictim,
     "NewVictimRecord": NewVictimRecord,
     "ServiceRecords": ServiceRecords,
@@ -52,6 +51,7 @@ export const PAGES = {
     "UserProfile": UserProfile,
     "VictimRecords": VictimRecords,
     "ViewData": ViewData,
+    "NewFlightLog": NewFlightLog,
 }
 
 export const pagesConfig = {

@@ -62,29 +62,12 @@ export default function NewFlightLog() {
   useEffect(() => {
     const fetchDailyServiceForDate = async () => {
       try {
-        const today = new Date().toISOString().split('T')[0];
-        setIsHistoricalFlight(selectedDate < today);
-        
-        if (selectedDate === today) {
-          // Fetch all services for the day, regardless of status
-          const services = await base44.entities.DailyService.filter({ date: selectedDate });
-          
-          if (services.length > 0) {
-            // dailyServiceData should be the array of services
-            setDailyServiceData(services); 
-            // setAvailableAircraft is less relevant now as we use filteredAircraft
-            setAvailableAircraft([]); 
-          } else {
-            setDailyServiceData([]);
-            setAvailableAircraft([]);
-          }
-        } else {
-          // Data histórica: mostrar todas as aeronaves
-          setDailyServiceData([]);
-          setAvailableAircraft([]);
-        }
+        // Buscar serviços para a data selecionada
+        const services = await base44.entities.DailyService.filter({ date: selectedDate });
+        setDailyServiceData(services);
       } catch (error) {
         console.error("Erro ao buscar serviço diário:", error);
+        setDailyServiceData([]);
       }
     };
     
@@ -119,19 +102,22 @@ export default function NewFlightLog() {
     }
   }, [nextMissionId, isLoadingMissionId, availableAircraft, selectedDate]);
 
-  // Filter aircraft based on daily service or historical flight
+  // Filter aircraft based on mission type and selected date
   useEffect(() => {
-    // If missionInOperation is unchecked, allow all aircraft
+    const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"];
+    
+    // Se "Missão em escala regular" está desmarcada, mostrar todas as aeronaves
     if (!missionInOperation) {
-      setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
+      setFilteredAircraft(AIRCRAFT_OPTIONS.map(a => ({ label: a, value: a })));
       return;
     }
 
-    // If missionInOperation is checked, filter by services for selected date (today or historical)
+    // Se "Missão em escala regular" está marcada, buscar no mapa da força da data selecionada
     if (dailyServiceData && Array.isArray(dailyServiceData)) {
       const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
       
       if (aircraftServices.length > 0) {
+        // Encontrou aeronaves no mapa da força para esta data
         const aircraftList = aircraftServices.map(svc => ({
           label: `${svc.name} - Equipe ${svc.team}`,
           value: svc.name, 
@@ -139,8 +125,8 @@ export default function NewFlightLog() {
         }));
         setFilteredAircraft(aircraftList);
       } else {
-        // Se não houver serviços de aeronave para a data, mostrar todas
-        setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
+        // Não encontrou aeronaves para esta data
+        setFilteredAircraft([]);
       }
     } else {
       setFilteredAircraft([]);
