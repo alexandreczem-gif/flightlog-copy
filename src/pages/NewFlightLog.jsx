@@ -65,26 +65,12 @@ export default function NewFlightLog() {
         const today = new Date().toISOString().split('T')[0];
         setIsHistoricalFlight(selectedDate < today);
         
-        if (selectedDate === today) {
-          // Fetch all services for the day, regardless of status
-          const services = await base44.entities.DailyService.filter({ date: selectedDate });
-          
-          if (services.length > 0) {
-            // dailyServiceData should be the array of services
-            setDailyServiceData(services); 
-            // setAvailableAircraft is less relevant now as we use filteredAircraft
-            setAvailableAircraft([]); 
-          } else {
-            setDailyServiceData([]);
-            setAvailableAircraft([]);
-          }
-        } else {
-          // Data histórica: mostrar todas as aeronaves
-          setDailyServiceData([]);
-          setAvailableAircraft([]);
-        }
+        // Buscar serviços lançados no Mapa da Força para a data selecionada
+        const services = await base44.entities.DailyService.filter({ date: selectedDate });
+        setDailyServiceData(services);
       } catch (error) {
         console.error("Erro ao buscar serviço diário:", error);
+        setDailyServiceData([]);
       }
     };
     
