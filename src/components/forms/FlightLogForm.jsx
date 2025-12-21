@@ -95,7 +95,7 @@ const UserSelect = ({ field, label, value, onChange, userList, required }) => {
   );
 };
 
-export default function FlightLogForm({ initialData, onSave, isSaving, availableCrew, missionId, dailyServiceData, onDateChange, isHistoricalFlight, filteredAircraft }) {
+export default function FlightLogForm({ initialData, onSave, isSaving, availableCrew, missionId, dailyServiceData, onDateChange, isHistoricalFlight }) {
   const [formData, setFormData] = useState({
     date: initialData?.date || '',
     mission_id: missionId || initialData?.mission_id || '',
@@ -180,6 +180,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   const [aerodromos, setAerodromos] = useState([]);
   const [hospitals, setHospitals] = useState([]);
   const [cities, setCities] = useState([]);
+  const [filteredAircraft, setFilteredAircraft] = useState([]);
+  const [availableBases, setAvailableBases] = useState([]);
   const [pendingVictims, setPendingVictims] = useState([]);
 
   useEffect(() => {
@@ -215,6 +217,40 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
 
   const [missionInOperation, setMissionInOperation] = useState(true);
 
+  // Filter aircraft based on daily service or historical flight
+  useEffect(() => {
+    if (!missionInOperation) {
+      // Se desmarcada, mostrar todas as aeronaves
+      setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
+      setAvailableBases([]);
+      return;
+    }
+
+    // Se marcada, mostrar aeronaves do mapa da força da data selecionada
+    if (dailyServiceData && Array.isArray(dailyServiceData)) {
+      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
+      
+      if (aircraftServices.length > 0) {
+        const aircraftList = aircraftServices.map(svc => ({
+          label: `${svc.name} - Equipe ${svc.team}`,
+          value: svc.name,
+          service: svc
+        }));
+        setFilteredAircraft(aircraftList);
+        
+        // Extrair bases únicas do mapa da força
+        const bases = [...new Set(aircraftServices.map(s => s.base))];
+        setAvailableBases(bases);
+      } else {
+        setFilteredAircraft([]);
+        setAvailableBases([]);
+      }
+    } else {
+      setFilteredAircraft([]);
+      setAvailableBases([]);
+    }
+  }, [dailyServiceData, missionInOperation]);
+
   useEffect(() => {
     if (missionId && missionId !== formData.mission_id) {
       setFormData(prev => ({ ...prev, mission_id: missionId }));
@@ -238,24 +274,26 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   }, [availableCrew]);
 
   const handleChange = (field, value) => {
-    // Handle aircraft selection - se marcado e há serviço, preencher dados
-    if (field === 'aircraft' && missionInOperation) {
-      const selectedAircraft = filteredAircraft.find(fa => fa.value === value);
-      if (selectedAircraft && selectedAircraft.service) {
-        const svc = selectedAircraft.service;
-        setFormData({ 
-          ...formData, 
-          aircraft: svc.name,
-          base: svc.base,
-          pilot_in_command: svc.commander || '',
-          copilot: svc.copilot || '',
-          oat_1: svc.oat_1 || '',
-          oat_2: svc.oat_2 || '',
-          oat_3: svc.oat_3 || '',
-          osm_1: svc.osm_1 || '',
-          osm_2: svc.osm_2 || ''
-        });
-        return;
+    // Handle aircraft selection with special logic for map/service
+    if (field === 'aircraft') {
+      if (missionInOperation && dailyServiceData && !isHistoricalFlight) {
+        const selectedOption = filteredAircraft.find(fa => fa.service && fa.service.id === value);
+        if (selectedOption && selectedOption.service) {
+          const aircraftService = selectedOption.service;
+          setFormData({ 
+            ...formData, 
+            aircraft: aircraftService.name,
+            base: aircraftService.base,
+            pilot_in_command: aircraftService.commander,
+            copilot: aircraftService.copilot || '',
+            oat_1: aircraftService.oat_1 || '',
+            oat_2: aircraftService.oat_2 || '',
+            oat_3: aircraftService.oat_3 || '',
+            osm_1: aircraftService.osm_1 || '',
+            osm_2: aircraftService.osm_2 || ''
+          });
+          return;
+        }
       }
     }
     setFormData({ ...formData, [field]: value });
@@ -629,20 +667,33 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
             </div>
             <div>
               <Label htmlFor="base">Base</Label>
-              <Select value={formData.base} onValueChange={(v) => handleChange('base', v)}>
-                <SelectTrigger id="base">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Litoral Resgate">Litoral Resgate</SelectItem>
-                  <SelectItem value="Litoral Policial">Litoral Policial</SelectItem>
-                  <SelectItem value="Curitiba Resgate">Curitiba Resgate</SelectItem>
-                  <SelectItem value="Curitiba Policial">Curitiba Policial</SelectItem>
-                  <SelectItem value="Londrina Policial">Londrina Policial</SelectItem>
-                  <SelectItem value="Cascavel Policial">Cascavel Policial</SelectItem>
-                  <SelectItem value="Umuarama Policial">Umuarama Policial</SelectItem>
-                </SelectContent>
-              </Select>
+              {missionInOperation && availableBases.length > 0 ? (
+                <Select value={formData.base} onValueChange={(v) => handleChange('base', v)}>
+                  <SelectTrigger id="base">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBases.map(base => (
+                      <SelectItem key={base} value={base}>{base}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={formData.base} onValueChange={(v) => handleChange('base', v)}>
+                  <SelectTrigger id="base">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Litoral Resgate">Litoral Resgate</SelectItem>
+                    <SelectItem value="Litoral Policial">Litoral Policial</SelectItem>
+                    <SelectItem value="Curitiba Resgate">Curitiba Resgate</SelectItem>
+                    <SelectItem value="Curitiba Policial">Curitiba Policial</SelectItem>
+                    <SelectItem value="Londrina Policial">Londrina Policial</SelectItem>
+                    <SelectItem value="Cascavel Policial">Cascavel Policial</SelectItem>
+                    <SelectItem value="Umuarama Policial">Umuarama Policial</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -660,26 +711,38 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <Label htmlFor="aircraft">Aeronave *</Label>
-              <Select 
-                value={formData.aircraft} 
-                onValueChange={(v) => handleChange('aircraft', v)} 
-                required
-              >
-                <SelectTrigger id="aircraft">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredAircraft && filteredAircraft.length > 0 ? (
-                    filteredAircraft.map(item => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="_empty_" disabled>Cadastre o mapa da força</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              {missionInOperation ? (
+                <Select onValueChange={(v) => handleChange('aircraft', v)}>
+                  <SelectTrigger id="aircraft">
+                    <SelectValue placeholder={formData.aircraft || "Selecione..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredAircraft.length > 0 ? (
+                      filteredAircraft.map(item => (
+                        item.service && item.service.id ? (
+                          <SelectItem key={item.service.id} value={item.service.id}>
+                            {item.label}
+                          </SelectItem>
+                        ) : null
+                      ))
+                    ) : (
+                      <SelectItem value="_empty_" disabled>Cadastre o serviço diário</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={formData.aircraft} onValueChange={(v) => handleChange('aircraft', v)} required>
+                  <SelectTrigger id="aircraft"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {filteredAircraft.map(item => (
+                      <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {filteredAircraft.length === 0 && missionInOperation && !isHistoricalFlight && (
+                <p className="text-xs text-red-500 mt-1">Cadastre o mapa da força</p>
+              )}
             </div>
             <div>
               <Label htmlFor="municipality">Município *</Label>
