@@ -121,31 +121,31 @@ export default function NewFlightLog() {
 
   // Filter aircraft based on daily service or historical flight
   useEffect(() => {
-    // If historical date, allow all aircraft regardless of checkbox
-    if (isHistoricalFlight) {
-      setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
-      return;
-    }
-
-    // If NOT historical (today or future) AND missionInOperation is unchecked, allow all
+    // If missionInOperation is unchecked, allow all aircraft
     if (!missionInOperation) {
       setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
       return;
     }
 
-    // If today AND missionInOperation is checked, filter by map
+    // If missionInOperation is checked, filter by services for selected date (today or historical)
     if (dailyServiceData && Array.isArray(dailyServiceData)) {
       const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
-      const aircraftList = aircraftServices.map(svc => ({
-        label: `${svc.name} - Equipe ${svc.team}`,
-        value: svc.name, 
-        service: svc
-      }));
-      setFilteredAircraft(aircraftList);
+      
+      if (aircraftServices.length > 0) {
+        const aircraftList = aircraftServices.map(svc => ({
+          label: `${svc.name} - Equipe ${svc.team}`,
+          value: svc.name, 
+          service: svc
+        }));
+        setFilteredAircraft(aircraftList);
+      } else {
+        // Se não houver serviços de aeronave para a data, mostrar todas
+        setFilteredAircraft(["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"].map(a => ({ label: a, value: a })));
+      }
     } else {
       setFilteredAircraft([]);
     }
-  }, [dailyServiceData, isHistoricalFlight, missionInOperation]);
+  }, [dailyServiceData, missionInOperation]);
 
   const handleAircraftChange = (aircraft) => {
     // Logic moved to form or handled via filteredAircraft
