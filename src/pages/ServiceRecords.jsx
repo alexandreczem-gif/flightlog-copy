@@ -66,8 +66,19 @@ export default function ServiceRecords() {
     return false;
   };
 
-  const handleEdit = (recordId) => {
-    navigate(`${createPageUrl("EditDailyService")}?id=${recordId}`);
+  const handleReactivate = async (record) => {
+    const confirmed = confirm(`Deseja reativar o serviço de ${record.name} para o Mapa da Força?`);
+    if (!confirmed) return;
+    
+    try {
+      await base44.entities.DailyService.update(record.id, { status: 'active' });
+      await logAction('update', 'DailyService', record.id, { action: 'reactivate_service' });
+      setRecords(records.filter(r => r.id !== record.id));
+      alert(`Serviço de ${record.name} reativado com sucesso!`);
+    } catch (error) {
+      console.error("Erro ao reativar serviço:", error);
+      alert("Erro ao reativar serviço.");
+    }
   };
 
   const handleDeleteClick = (record) => {
@@ -194,10 +205,10 @@ export default function ServiceRecords() {
                                   variant="ghost" 
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => handleEdit(record.id)}
-                                  title="Editar"
+                                  onClick={() => handleReactivate(record)}
+                                  title="Reativar para Mapa da Força"
                                 >
-                                  <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                                  <Pencil className="w-3.5 h-3.5 text-blue-600" />
                                 </Button>
                                 <Button 
                                   variant="ghost" 
