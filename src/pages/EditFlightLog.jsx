@@ -18,6 +18,7 @@ export default function EditFlightLog() {
   const [logToEdit, setLogToEdit] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [logId, setLogId] = useState(null);
+  const [dailyServiceData, setDailyServiceData] = useState(null);
 
   useEffect(() => {
     const fetchLogAndCheckAccess = async () => {
@@ -68,6 +69,12 @@ export default function EditFlightLog() {
         }
 
         setLogToEdit(log);
+        
+        // Buscar serviços do dia para permitir seleção de aeronave
+        if (log.date) {
+          const services = await base44.entities.DailyService.filter({ date: log.date });
+          setDailyServiceData(services);
+        }
       } catch (error) {
         console.error("Erro ao buscar registro ou verificar acesso:", error);
         alert("Erro ao buscar registro ou verificar permissões. Tente novamente.");
@@ -150,6 +157,7 @@ export default function EditFlightLog() {
                 isHistoricalFlight={true}
                 missionInOperation={logToEdit?.is_regular_scale || false}
                 setMissionInOperation={() => {}}
+                dailyServiceData={dailyServiceData}
                 filteredAircraft={[
                   { label: "Arcanjo 01", value: "Arcanjo 01" },
                   { label: "Falcão 08", value: "Falcão 08" },
