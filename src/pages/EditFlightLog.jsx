@@ -148,6 +148,18 @@ export default function EditFlightLog() {
                 isSaving={isSaving} 
                 initialData={logToEdit}
                 isHistoricalFlight={true}
+                missionInOperation={false}
+                setMissionInOperation={() => {}}
+                filteredAircraft={[
+                  { label: "Arcanjo 01", value: "Arcanjo 01" },
+                  { label: "Falcão 08", value: "Falcão 08" },
+                  { label: "Falcão 03", value: "Falcão 03" },
+                  { label: "Falcão 04", value: "Falcão 04" },
+                  { label: "Falcão 12", value: "Falcão 12" },
+                  { label: "Falcão 13", value: "Falcão 13" },
+                  { label: "Falcão 14", value: "Falcão 14" },
+                  { label: "Falcão 15", value: "Falcão 15" }
+                ]}
               />
             </CardContent>
           </Card>
