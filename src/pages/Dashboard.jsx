@@ -143,23 +143,23 @@ export default function Dashboard() {
     }, 0);
 
     // Contagem de Vítimas/Pacientes Atendidos (da entidade VictimRecord)
+    // Apenas vítimas com pending_registration: false (registros completos)
     let relevantVictimRecords = [];
     if (isOperationStats) {
-       // Filtra por data >= operationStartDate e base se houver
+       // Filtra por data >= operationStartDate, base se houver, e pending_registration: false
        relevantVictimRecords = allVictimRecords.filter(r => {
-         if (!r.data) return false;
+         if (!r.data || r.pending_registration !== false) return false;
          const isAfterStart = r.data >= operationStartDate;
          
          let matchesBase = true;
          if (adminSettings.operation_base) {
-           // A base pode vir com nomes ligeiramente diferentes, mas vamos assumir igualdade
            matchesBase = r.base === adminSettings.operation_base;
          }
          return isAfterStart && matchesBase;
        });
     } else {
-       // Para dados totais, considera todos os registros carregados
-       relevantVictimRecords = allVictimRecords;
+       // Para dados totais, considera todos os registros não pendentes
+       relevantVictimRecords = allVictimRecords.filter(r => r.pending_registration !== false);
     }
     const totalVictims = relevantVictimRecords.length;
 

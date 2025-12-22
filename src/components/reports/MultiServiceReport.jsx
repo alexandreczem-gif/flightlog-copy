@@ -56,7 +56,7 @@ export function MultiServiceReport({ services }) {
           }
 
           const operationVictims = allVictimRecords.filter(r => {
-            if (!r.data) return false;
+            if (!r.data || r.pending_registration !== false) return false;
             const matchesDate = r.data >= opStartDate;
             const matchesBase = opBase ? r.base === opBase : true;
             return matchesDate && matchesBase;
@@ -81,7 +81,7 @@ export function MultiServiceReport({ services }) {
       const lastWednesdayStr = format(lastWednesday, 'yyyy-MM-dd');
 
       const weekLogs = allFlightLogs.filter(log => log.date >= lastWednesdayStr && log.date <= serviceDate);
-      const weekVictims = allVictimRecords.filter(r => r.data >= lastWednesdayStr && r.data <= serviceDate);
+      const weekVictims = allVictimRecords.filter(r => r.data >= lastWednesdayStr && r.data <= serviceDate && r.pending_registration !== false);
 
       weekData = {
         startDate: lastWednesdayStr,
