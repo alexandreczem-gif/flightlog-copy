@@ -609,13 +609,15 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
               onCheckedChange={(checked) => {
                 setMissionInOperation(checked);
                 setFormData(prev => ({ ...prev, is_regular_scale: checked }));
-              }} 
+              }}
+              disabled={isHistoricalFlight}
             />
             <Label
               htmlFor="missionInOperation"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${isHistoricalFlight ? 'opacity-70' : 'cursor-pointer'}`}
             >
               Missão em escala regular de alguma base
+              {isHistoricalFlight && <span className="text-xs text-slate-500 ml-2">(não editável)</span>}
             </Label>
           </div>
 

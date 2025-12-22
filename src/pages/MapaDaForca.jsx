@@ -112,12 +112,13 @@ export default function MapaDaForca() {
   };
 
   const checkOverlap = (name, start, end) => {
-    // Simple overlap check for same resource name
+    // Check overlap for same resource name ON THE SAME DATE
     const startMinutes = timeToMinutes(start);
     const endMinutes = timeToMinutes(end);
 
     const overlaps = todayServices.filter(s => 
       s.name === name && 
+      s.date === todayStr &&
       s.status === 'active' &&
       (
         (timeToMinutes(s.start_time) < endMinutes && timeToMinutes(s.end_time) > startMinutes)

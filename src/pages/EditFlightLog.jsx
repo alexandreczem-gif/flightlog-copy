@@ -148,7 +148,7 @@ export default function EditFlightLog() {
                 isSaving={isSaving} 
                 initialData={logToEdit}
                 isHistoricalFlight={true}
-                missionInOperation={false}
+                missionInOperation={logToEdit?.is_regular_scale || false}
                 setMissionInOperation={() => {}}
                 filteredAircraft={[
                   { label: "Arcanjo 01", value: "Arcanjo 01" },
