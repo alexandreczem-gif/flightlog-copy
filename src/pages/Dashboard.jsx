@@ -150,7 +150,7 @@ export default function Dashboard() {
        relevantVictimRecords = allVictimRecords.filter(r => {
          if (!r.data || r.pending_registration !== false) return false;
          const isAfterStart = r.data >= operationStartDate;
-         
+
          let matchesBase = true;
          if (adminSettings.operation_base) {
            matchesBase = r.base === adminSettings.operation_base;
@@ -158,8 +158,12 @@ export default function Dashboard() {
          return isAfterStart && matchesBase;
        });
     } else {
-       // Para dados totais, considera todos os registros não pendentes
-       relevantVictimRecords = allVictimRecords.filter(r => r.pending_registration !== false);
+       // Para dados totais, considera todos os registros completos (pending_registration: false) da aeronave
+       relevantVictimRecords = allVictimRecords.filter(r => {
+         if (r.pending_registration !== false) return false;
+         // Filtra apenas vítimas da aeronave específica (Arcanjo 01 para totalStats)
+         return r.aeronave === 'Arcanjo 01';
+       });
     }
     const totalVictims = relevantVictimRecords.length;
 
