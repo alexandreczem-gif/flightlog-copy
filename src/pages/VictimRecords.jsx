@@ -358,6 +358,11 @@ export default function VictimRecords() {
                             value = formatDuration(rec[col]);
                         }
                         
+                        // Mapear "Litoral Resgate" para "Operação Verão" na exportação SESA
+                        if (col === 'base' && value === 'Litoral Resgate') {
+                            value = 'Operação Verão';
+                        }
+                        
                         return `"${value.replace(/"/g, '""')}"`;
                     }).join(',')
                 )
