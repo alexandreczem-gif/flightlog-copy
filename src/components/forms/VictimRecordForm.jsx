@@ -238,7 +238,7 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                         const [year, month, day] = data.data.split('-');
                         return `${day}/${month}/${year}`;
                     })() : ''} readOnly className="bg-slate-100" /></div>
-                    <div><Label>Base</Label><Select value={data.base} disabled><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{BASE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>Base</Label><Select value={data.base || ''} disabled><SelectTrigger><SelectValue placeholder="Sem base informada" /></SelectTrigger><SelectContent>{BASE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>Nº Ocorrência SAMU</Label><Input value={data.ocorrencia_samu} onChange={e => handleChange('ocorrencia_samu', e.target.value)} /></div>
                 </div>
             </FormSection>

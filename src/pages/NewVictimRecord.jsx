@@ -99,7 +99,7 @@ export default function NewVictimRecord() {
                     mission_id: flight.mission_id,
                     ano: now.getFullYear(),
                     mes: format(now, 'MMMM', { locale: ptBR }),
-                    base: "Operação Verão",
+                    base: flight.base || "Operação Verão",
                     data: flightDate,
                     ocorrencia_samu: flight.sade_occurrence_number || '',
                     tipo_transporte: flight.mission_type,
