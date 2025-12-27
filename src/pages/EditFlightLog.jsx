@@ -19,6 +19,7 @@ export default function EditFlightLog() {
   const [isLoading, setIsLoading] = useState(true);
   const [logId, setLogId] = useState(null);
   const [dailyServiceData, setDailyServiceData] = useState(null);
+  const [missionInOperation, setMissionInOperation] = useState(false);
 
   useEffect(() => {
     const fetchLogAndCheckAccess = async () => {
@@ -69,6 +70,7 @@ export default function EditFlightLog() {
         }
 
         setLogToEdit(log);
+        setMissionInOperation(log.is_regular_scale || false);
         
         // Buscar serviços do dia para permitir seleção de aeronave
         if (log.date) {
@@ -155,8 +157,8 @@ export default function EditFlightLog() {
                 isSaving={isSaving} 
                 initialData={logToEdit}
                 isHistoricalFlight={true}
-                missionInOperation={logToEdit?.is_regular_scale || false}
-                setMissionInOperation={() => {}}
+                missionInOperation={missionInOperation}
+                setMissionInOperation={setMissionInOperation}
                 dailyServiceData={dailyServiceData}
                 filteredAircraft={[
                   { label: "Arcanjo 01", value: "Arcanjo 01" },
