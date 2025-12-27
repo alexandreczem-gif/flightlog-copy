@@ -610,14 +610,12 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                 setMissionInOperation(checked);
                 setFormData(prev => ({ ...prev, is_regular_scale: checked }));
               }}
-              disabled={isHistoricalFlight}
             />
             <Label
               htmlFor="missionInOperation"
-              className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${isHistoricalFlight ? 'opacity-70' : 'cursor-pointer'}`}
+              className="text-sm font-medium leading-none cursor-pointer"
             >
               Missão em escala regular de alguma base
-              {isHistoricalFlight && <span className="text-xs text-slate-500 ml-2">(não editável)</span>}
             </Label>
           </div>
 
@@ -694,44 +692,18 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <Label htmlFor="aircraft">Aeronave *</Label>
-              {missionInOperation ? (
-                // Missão em escala regular: usar aeronaves do mapa da força
-                <Select value={selectedServiceId} onValueChange={(v) => handleChange('aircraft', v)} required>
-                  <SelectTrigger id="aircraft">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredAircraft && filteredAircraft.length > 0 ? (
-                      filteredAircraft.map(item => (
-                        item.service && item.service.id ? (
-                          <SelectItem key={item.service.id} value={item.service.id}>
-                            {item.label}
-                          </SelectItem>
-                        ) : null
-                      ))
-                    ) : (
-                      <SelectItem value="_empty_" disabled>Cadastre o mapa da força</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              ) : (
-                // Missão fora de escala: mostrar todas as aeronaves
-                <Select value={formData.aircraft} onValueChange={(v) => handleChange('aircraft', v)} required>
-                  <SelectTrigger id="aircraft"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {filteredAircraft && filteredAircraft.length > 0 ? (
-                      filteredAircraft.map(item => (
-                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="_empty_" disabled>Nenhuma aeronave disponível</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-              {filteredAircraft.length === 0 && missionInOperation && (
-                <p className="text-xs text-red-500 mt-1">Cadastre o mapa da força para a data selecionada</p>
-              )}
+              <Select value={formData.aircraft} onValueChange={(v) => handleChange('aircraft', v)} required>
+                <SelectTrigger id="aircraft"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {filteredAircraft && filteredAircraft.length > 0 ? (
+                    filteredAircraft.map(item => (
+                      <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="_empty_" disabled>Nenhuma aeronave disponível</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="municipality">Município *</Label>
