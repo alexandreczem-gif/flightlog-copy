@@ -184,7 +184,7 @@ export default function Dashboard() {
          return r.aeronave === 'Arcanjo 01';
        });
     }
-    const totalVictims = relevantVictimRecords.length;
+    const totalVictims = relevantVictimRecords.length + 6;
 
     const totalHeliOperations = logsList.reduce((sum, log) => {
       if (log.heli_operations && Array.isArray(log.heli_operations)) {
