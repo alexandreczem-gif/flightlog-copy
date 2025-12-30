@@ -56,9 +56,28 @@ export default function Dashboard() {
         base44.entities.OperationSettings.list(),
         VictimRecord.list('-data', 2000)
       ]);
-      
+
+      // Create a map of flight_log_id to aircraft
+      const flightLogAircraftMap = {};
+      allLogs.forEach(log => {
+        if (log.id && log.aircraft) {
+          flightLogAircraftMap[log.id] = log.aircraft;
+        }
+      });
+
+      // Ensure all victim records have aeronave field set
+      const enrichedVictimRecords = victimRecords.map(victim => {
+        if (!victim.aeronave && victim.flight_log_id && flightLogAircraftMap[victim.flight_log_id]) {
+          return {
+            ...victim,
+            aeronave: flightLogAircraftMap[victim.flight_log_id]
+          };
+        }
+        return victim;
+      });
+
       setLogs(allLogs);
-      setAllVictimRecords(victimRecords);
+      setAllVictimRecords(enrichedVictimRecords);
       
       // Handle Settings
       let opStartDate = null;
