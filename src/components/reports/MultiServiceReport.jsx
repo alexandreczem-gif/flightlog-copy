@@ -150,21 +150,27 @@ export function MultiServiceReport({ services }) {
       iframe.style.position = 'absolute';
       iframe.style.left = '-9999px';
       iframe.style.width = '210mm';
-      iframe.style.height = '297mm';
       document.body.appendChild(iframe);
 
       iframe.contentDocument.write(html);
       iframe.contentDocument.close();
 
-      // Aguardar carregamento das fontes e imagens
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aguardar carregamento completo dos gráficos Chart.js
+      await new Promise(resolve => {
+        iframe.contentWindow.addEventListener('load', () => {
+          setTimeout(resolve, 2000);
+        });
+      });
 
-      // Capturar como imagem
+      // Capturar como imagem com configuração otimizada para canvas
       const canvas = await html2canvas(iframe.contentDocument.body, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: iframe.contentDocument.body.scrollWidth,
+        windowHeight: iframe.contentDocument.body.scrollHeight
       });
 
       // Converter para PNG e fazer download
