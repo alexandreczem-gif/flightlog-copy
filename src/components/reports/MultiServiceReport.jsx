@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,6 +15,7 @@ function MultiServiceReport({ services }) {
   const [open, setOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [outputFormat, setOutputFormat] = useState('png');
 
   const completedServices = services.filter(s => s.status === 'completed');
 
@@ -164,46 +167,56 @@ function MultiServiceReport({ services }) {
 
       const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, weekData, todayFuelings);
       
-      // Criar elemento temporário para renderizar o relatório
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '0';
-      tempDiv.style.width = '210mm';
-      tempDiv.style.background = 'white';
-      tempDiv.innerHTML = html;
-      document.body.appendChild(tempDiv);
-      
-      // Aguardar renderização e capturar como imagem
-      setTimeout(async () => {
-        try {
-          const canvas = await html2canvas(tempDiv, {
-            scale: 2,
-            backgroundColor: '#ffffff',
-            logging: false,
-            useCORS: true
-          });
-          
-          // Converter para blob e fazer download
-          canvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `relatorio-consolidado-${format(new Date(), 'dd-MM-yyyy-HHmm')}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
+      if (outputFormat === 'pdf') {
+        // Gerar PDF
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(html);
+        printWindow.document.close();
+        
+        setTimeout(() => {
+          printWindow.print();
+          setOpen(false);
+          setSelectedIds([]);
+        }, 500);
+      } else {
+        // Gerar PNG
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '0';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.background = 'white';
+        tempDiv.innerHTML = html;
+        document.body.appendChild(tempDiv);
+        
+        setTimeout(async () => {
+          try {
+            const canvas = await html2canvas(tempDiv, {
+              scale: 2,
+              backgroundColor: '#ffffff',
+              logging: false,
+              useCORS: true
+            });
             
-            // Limpar
+            canvas.toBlob((blob) => {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `relatorio-consolidado-${format(new Date(), 'dd-MM-yyyy-HHmm')}.png`;
+              a.click();
+              URL.revokeObjectURL(url);
+              
+              document.body.removeChild(tempDiv);
+              setOpen(false);
+              setSelectedIds([]);
+            });
+          } catch (error) {
+            console.error('Erro ao gerar imagem:', error);
+            alert('Erro ao gerar imagem do relatório.');
             document.body.removeChild(tempDiv);
-            setOpen(false);
-            setSelectedIds([]);
-          });
-        } catch (error) {
-          console.error('Erro ao gerar imagem:', error);
-          alert('Erro ao gerar imagem do relatório.');
-          document.body.removeChild(tempDiv);
-        }
-      }, 1000);
+          }
+        }, 1000);
+      }
     } catch (error) {
       console.error('Erro ao gerar relatório consolidado:', error);
       alert('Erro ao gerar relatório consolidado.');
@@ -477,8 +490,8 @@ function MultiServiceReport({ services }) {
                 <table class="fueling-table">
                   <thead>
                     <tr>
-                      ${operationData.drowningStats.map(stat => `<th style="${stat.grade === 'Somente Resgate' ? 'width: 80px;' : ''}">${stat.grade === 'Somente Resgate' ? 'S.Resgate' : stat.grade}</th>`).join('')}
-                      <th style="background: #1e40af;">Total</th>
+                      ${operationData.drowningStats.map(stat => `<th style="text-align: center; ${stat.grade === 'Somente Resgate' ? 'width: 80px;' : ''}">${stat.grade === 'Somente Resgate' ? 'S.Resgate' : stat.grade}</th>`).join('')}
+                      <th style="background: #1e40af; text-align: center;">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -788,18 +801,33 @@ function MultiServiceReport({ services }) {
             )}
           </div>
         </ScrollArea>
-        <div className="flex justify-between items-center pt-4 border-t">
-          <span className="text-sm text-slate-600">
-            {selectedIds.length} serviço(s) selecionado(s)
-          </span>
-          <Button 
-          onClick={generateConsolidatedReport} 
-          disabled={isGenerating || selectedIds.length === 0}
-          className="bg-orange-600 hover:bg-orange-700"
-          >
-          <Download className="w-4 h-4 mr-2" />
-          {isGenerating ? 'Gerando...' : 'Gerar Imagem PNG'}
-          </Button>
+        <div className="pt-4 border-t space-y-4">
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Formato de Saída</Label>
+            <RadioGroup value={outputFormat} onValueChange={setOutputFormat} className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="png" id="png" />
+                <Label htmlFor="png" className="cursor-pointer">Imagem PNG</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="pdf" id="pdf" />
+                <Label htmlFor="pdf" className="cursor-pointer">PDF (Impressão)</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-slate-600">
+              {selectedIds.length} serviço(s) selecionado(s)
+            </span>
+            <Button 
+            onClick={generateConsolidatedReport} 
+            disabled={isGenerating || selectedIds.length === 0}
+            className="bg-orange-600 hover:bg-orange-700"
+            >
+            <Download className="w-4 h-4 mr-2" />
+            {isGenerating ? 'Gerando...' : `Gerar ${outputFormat === 'png' ? 'PNG' : 'PDF'}`}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
