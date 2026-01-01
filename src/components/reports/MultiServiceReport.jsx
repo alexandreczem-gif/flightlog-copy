@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import html2canvas from 'html2canvas';
 
-export function MultiServiceReport({ services }) {
+function MultiServiceReport({ services }) {
   const [open, setOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -806,4 +806,5 @@ export function MultiServiceReport({ services }) {
   );
 }
 
+export { MultiServiceReport };
 export default MultiServiceReport;
