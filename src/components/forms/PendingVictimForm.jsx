@@ -352,6 +352,7 @@ export default function PendingVictimForm({ onSave, isSaving, currentUser }) {
                         <Select value={data.grau_afogamento} onValueChange={v => handleChange('grau_afogamento', v)}>
                             <SelectTrigger id="grau_afogamento"><SelectValue /></SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="Somente Resgate">Somente Resgate</SelectItem>
                                 {['1', '2', '3', '4', '5', '6', 'NA'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                             </SelectContent>
                         </Select>

@@ -62,14 +62,12 @@ export function MultiServiceReport({ services }) {
             return matchesDate && matchesBase;
           });
 
-          // Calcular estatísticas de afogamento
+          // Calcular estatísticas de afogamento - todas as opções
           const drowningStats = [];
           const grades = ['Somente Resgate', '1', '2', '3', '4', '5', '6'];
           grades.forEach(grade => {
             const count = operationVictims.filter(v => v.grau_afogamento === grade).length;
-            if (count > 0) {
-              drowningStats.push({ grade, count });
-            }
+            drowningStats.push({ grade, count });
           });
 
           operationData = {
@@ -78,7 +76,7 @@ export function MultiServiceReport({ services }) {
             logs: operationLogs,
             victims: operationVictims,
             stats: calculateStats(operationLogs, operationVictims),
-            drowningStats: drowningStats.length > 0 ? drowningStats : null
+            drowningStats
           };
         }
       }
@@ -341,54 +339,54 @@ export function MultiServiceReport({ services }) {
             font-weight: normal;
           }
           .service-section {
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             page-break-inside: avoid;
             border: 2px solid #e2e8f0;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 6px;
             background: #ffffff;
           }
           .service-header {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            background: #dc2626;
             color: white;
-            padding: 12px;
-            font-size: 18px;
+            padding: 10px;
+            font-size: 16px;
             font-weight: bold;
-            margin: -20px -20px 20px -20px;
-            border-radius: 6px 6px 0 0;
+            margin: -15px -15px 15px -15px;
+            border-radius: 4px 4px 0 0;
           }
           .info-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
           }
           .info-item {
-            padding: 10px;
-            background: #f8fafc;
-            border-left: 4px solid #dc2626;
+            padding: 8px;
+            background: #f1f5f9;
+            border-left: 3px solid #dc2626;
             border-radius: 4px;
           }
           .info-label {
             font-weight: bold;
-            color: #64748b;
-            font-size: 11px;
+            color: #475569;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
           }
           .info-value {
             color: #0f172a;
-            font-size: 14px;
-            margin-top: 4px;
+            font-size: 13px;
+            margin-top: 3px;
             font-weight: 500;
           }
           .section-title {
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            background: #64748b;
             color: white;
-            padding: 10px 14px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 13px;
             font-weight: bold;
-            margin: 20px 0 15px 0;
+            margin: 15px 0 10px 0;
             border-radius: 4px;
           }
           .mission-card {
@@ -438,37 +436,41 @@ export function MultiServiceReport({ services }) {
             font-size: 12px;
           }
           .summary-box {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            background: #fef3c7;
             border: 2px solid #f59e0b;
-            padding: 18px;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
           }
           .summary-box h3 {
-            margin: 0 0 12px 0;
+            margin: 0 0 10px 0;
             color: #92400e;
-            font-size: 16px;
+            font-size: 15px;
           }
           .stats-section {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            background: #dbeafe;
             border: 2px solid #3b82f6;
-            padding: 20px;
-            margin: 30px 0;
-            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
             page-break-inside: avoid;
           }
           .stats-section h3 {
-            margin: 0 0 15px 0;
+            margin: 0 0 12px 0;
             color: #1e40af;
-            font-size: 18px;
+            font-size: 16px;
             border-bottom: 2px solid #3b82f6;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
           }
           .chart-container {
-            margin: 20px 0;
+            margin: 15px 0;
             text-align: center;
             page-break-inside: avoid;
+          }
+          .compact-chart {
+            display: inline-block;
+            width: 45%;
+            margin: 0 10px;
           }
           .fueling-table {
             width: 100%;
@@ -479,12 +481,14 @@ export function MultiServiceReport({ services }) {
           .fueling-table th {
             background: #dc2626;
             color: white;
-            padding: 10px;
+            padding: 8px;
             text-align: left;
+            font-size: 11px;
           }
           .fueling-table td {
             border: 1px solid #e2e8f0;
-            padding: 8px;
+            padding: 6px;
+            font-size: 11px;
           }
           .fueling-table tr:nth-child(even) {
             background: #f8fafc;
@@ -501,11 +505,11 @@ export function MultiServiceReport({ services }) {
         ${operationData ? `
           <div class="stats-section">
             <h3>📈 Dados da Operação Atual</h3>
-            <p style="color: #1e40af; margin-bottom: 15px;">
+            <p style="color: #1e40af; margin-bottom: 10px; font-size: 13px;">
               <strong>Período:</strong> Desde ${format(new Date(operationData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
               ${operationData.base ? ` | <strong>Base:</strong> ${operationData.base}` : ''}
             </p>
-            <div class="info-grid">
+            <div class="info-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;"">
               <div class="info-item">
                 <div class="info-label">Total de Voos</div>
                 <div class="info-value">${operationData.stats.totalFlights}</div>
@@ -532,26 +536,20 @@ export function MultiServiceReport({ services }) {
               </div>
             </div>
 
-            ${operationData.drowningStats ? `
+            ${operationData.drowningStats && operationData.drowningStats.length > 0 ? `
               <div style="margin-top: 20px;">
-                <h4 style="color: #1e40af; margin-bottom: 10px; font-size: 16px; font-weight: bold;">Afogamentos Atendidos por Grau</h4>
+                <h4 style="color: #1e40af; margin-bottom: 10px; font-size: 14px; font-weight: bold;">Afogamentos Atendidos por Grau</h4>
                 <table class="fueling-table">
                   <thead>
                     <tr>
-                      <th>Grau de Afogamento</th>
-                      <th>Quantidade</th>
+                      ${operationData.drowningStats.map(stat => `<th>${stat.grade}</th>`).join('')}
+                      <th style="background: #1e40af;">Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${operationData.drowningStats.map(stat => `
-                      <tr>
-                        <td>${stat.grade}</td>
-                        <td><strong>${stat.count}</strong></td>
-                      </tr>
-                    `).join('')}
-                    <tr style="background: #dbeafe; font-weight: bold;">
-                      <td>Total de Afogamentos</td>
-                      <td>${operationData.drowningStats.reduce((sum, s) => sum + s.count, 0)}</td>
+                    <tr>
+                      ${operationData.drowningStats.map(stat => `<td style="text-align: center;"><strong>${stat.count}</strong></td>`).join('')}
+                      <td style="text-align: center; background: #dbeafe; font-weight: bold;">${operationData.drowningStats.reduce((sum, s) => sum + s.count, 0)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -559,11 +557,12 @@ export function MultiServiceReport({ services }) {
             ` : ''}
 
             <div class="chart-container">
-              ${missionTypeChartData}
-            </div>
-
-            <div class="chart-container">
-              ${flightHoursChartData}
+              <div class="compact-chart">
+                ${missionTypeChartData.replace('width="400" height="400"', 'width="280" height="280"')}
+              </div>
+              <div class="compact-chart">
+                ${flightHoursChartData.replace('width="600" height="300"', 'width="280" height="280"')}
+              </div>
             </div>
           </div>
         ` : ''}
@@ -660,7 +659,7 @@ export function MultiServiceReport({ services }) {
                   <div class="info-value">${missions.length}</div>
                 </div>
                 <div class="info-item">
-                  <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
+                  <div class="info-label">Vítimas Resgatadas em Op. Helitransportadas</div>
                   <div class="info-value">${stats?.rescuedVictims || 0}</div>
                 </div>
                 <div class="info-item">
