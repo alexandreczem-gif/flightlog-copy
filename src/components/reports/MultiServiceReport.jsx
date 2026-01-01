@@ -455,16 +455,60 @@ export function MultiServiceReport({ services }) {
           <p style="margin: 10px 0; color: #64748b;">Total de Recursos: ${services.length}</p>
         </div>
 
+        ${operationData ? `
+          <div class="stats-section">
+            <h3>📈 Dados da Operação Atual</h3>
+            <p style="color: #1e40af; margin-bottom: 15px;">
+              <strong>Período:</strong> Desde ${format(new Date(operationData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+              ${operationData.base ? ` | <strong>Base:</strong> ${operationData.base}` : ''}
+            </p>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Total de Voos</div>
+                <div class="info-value">${operationData.stats.totalFlights}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Horas Voadas</div>
+                <div class="info-value">${operationData.stats.formattedHours}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas/Pacientes</div>
+                <div class="info-value">${operationData.stats.totalVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-value">${operationData.stats.totalRescuedVictims}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Pessoas Orientadas</div>
+                <div class="info-value">${operationData.stats.totalOrientedPeople}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Água Lançada</div>
+                <div class="info-value">${operationData.stats.totalWaterLaunched} L</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              ${missionTypeChartData}
+            </div>
+
+            <div class="chart-container">
+              ${flightHoursChartData}
+            </div>
+          </div>
+        ` : ''}
+
         <div class="summary-box">
           <h3>Resumo Geral</h3>
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Total de Aeronaves</div>
-              <div class="info-value">${services.filter(s => s.type === 'aircraft').length}</div>
+              <div class="info-value">${[...new Set(services.filter(s => s.type === 'aircraft').map(s => s.name))].length}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Total de UAAs</div>
-              <div class="info-value">${services.filter(s => s.type === 'uaa').length}</div>
+              <div class="info-value">${[...new Set(services.filter(s => s.type === 'uaa').map(s => s.name))].length}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Total de Missões</div>
@@ -507,50 +551,6 @@ export function MultiServiceReport({ services }) {
                 </tr>
               </tbody>
             </table>
-          </div>
-        ` : ''}
-
-        ${operationData ? `
-          <div class="stats-section">
-            <h3>📈 Dados da Operação Atual</h3>
-            <p style="color: #1e40af; margin-bottom: 15px;">
-              <strong>Período:</strong> Desde ${format(new Date(operationData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-              ${operationData.base ? ` | <strong>Base:</strong> ${operationData.base}` : ''}
-            </p>
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Total de Voos</div>
-                <div class="info-value">${operationData.stats.totalFlights}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Horas Voadas</div>
-                <div class="info-value">${operationData.stats.formattedHours}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Vítimas/Pacientes</div>
-                <div class="info-value">${operationData.stats.totalVictims}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Vítimas Resgatadas</div>
-                <div class="info-value">${operationData.stats.totalRescuedVictims}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Pessoas Orientadas</div>
-                <div class="info-value">${operationData.stats.totalOrientedPeople}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Água Lançada</div>
-                <div class="info-value">${operationData.stats.totalWaterLaunched} L</div>
-              </div>
-            </div>
-
-            <div class="chart-container">
-              ${missionTypeChartData}
-            </div>
-
-            <div class="chart-container">
-              ${flightHoursChartData}
-            </div>
           </div>
         ` : ''}
 
