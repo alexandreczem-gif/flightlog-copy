@@ -380,6 +380,27 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
     setFormData({ ...formData, victims: newVictims });
   };
 
+  const replaceVictimWithPending = (index, pendingVictimRecord) => {
+    const newVictims = [...formData.victims];
+    newVictims[index] = {
+      name: pendingVictimRecord.nome_paciente,
+      sex: pendingVictimRecord.sexo_paciente,
+      age: pendingVictimRecord.idade,
+      life_code: '',
+      drowning_grade: pendingVictimRecord.grau_afogamento || 'NA',
+      origin_city: pendingVictimRecord.cidade_origem || formData.municipality || '',
+      origin_city_special: '',
+      origin_hospital: pendingVictimRecord.hospital_origem || '',
+      origin_landing_site: pendingVictimRecord.local_pouso_origem || '',
+      destination_city: pendingVictimRecord.cidade_destino || '',
+      destination_city_special: '',
+      destination_hospital: pendingVictimRecord.hospital_destino || '',
+      destination_landing_site: pendingVictimRecord.local_pouso_destino || '',
+      pending_victim_id: pendingVictimRecord.id
+    };
+    setFormData({ ...formData, victims: newVictims });
+  };
+
   const handleVictimChange = (index, field, value) => {
     const newVictims = [...formData.victims];
     newVictims[index][field] = value;
@@ -1050,15 +1071,34 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
           {formData.victims.map((victim, index) => (
             <div key={index} className="p-4 border rounded-lg bg-slate-50">
               <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">Vítima {index + 1}</h3>
-                  {victim.pending_victim_id && (
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Pré-detalhada</span>
-                  )}
-                </div>
-                <Button type="button" onClick={() => removeVictim(index)} variant="ghost" size="sm">
-                  <Minus className="w-4 h-4" />
-                </Button>
+               <div className="flex items-center gap-2">
+                 <h3 className="font-semibold">Vítima {index + 1}</h3>
+                 {victim.pending_victim_id && (
+                   <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Pré-detalhada</span>
+                 )}
+               </div>
+               <div className="flex gap-2">
+                 {pendingVictims.length > 0 && (
+                   <Select onValueChange={(victimId) => {
+                     const selected = pendingVictims.find(v => v.id === victimId);
+                     if (selected) replaceVictimWithPending(index, selected);
+                   }}>
+                     <SelectTrigger className="w-40 h-8 text-xs">
+                       <SelectValue placeholder="Substituir por..." />
+                     </SelectTrigger>
+                     <SelectContent>
+                       {pendingVictims.map(pv => (
+                         <SelectItem key={pv.id} value={pv.id}>
+                           {pv.nome_paciente}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 )}
+                 <Button type="button" onClick={() => removeVictim(index)} variant="ghost" size="sm">
+                   <Minus className="w-4 h-4" />
+                 </Button>
+               </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-4">
