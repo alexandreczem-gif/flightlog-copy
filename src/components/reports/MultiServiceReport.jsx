@@ -7,6 +7,7 @@ import { FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import html2canvas from 'html2canvas';
 
 export function MultiServiceReport({ services }) {
   const [open, setOpen] = useState(false);
@@ -163,15 +164,46 @@ export function MultiServiceReport({ services }) {
 
       const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, weekData, todayFuelings);
       
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(html);
-      printWindow.document.close();
+      // Criar elemento temporário para renderizar o relatório
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '210mm';
+      tempDiv.style.background = 'white';
+      tempDiv.innerHTML = html;
+      document.body.appendChild(tempDiv);
       
-      setTimeout(() => {
-        printWindow.print();
-        setOpen(false);
-        setSelectedIds([]);
-      }, 500);
+      // Aguardar renderização e capturar como imagem
+      setTimeout(async () => {
+        try {
+          const canvas = await html2canvas(tempDiv, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false,
+            useCORS: true
+          });
+          
+          // Converter para blob e fazer download
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio-consolidado-${format(new Date(), 'dd-MM-yyyy-HHmm')}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            // Limpar
+            document.body.removeChild(tempDiv);
+            setOpen(false);
+            setSelectedIds([]);
+          });
+        } catch (error) {
+          console.error('Erro ao gerar imagem:', error);
+          alert('Erro ao gerar imagem do relatório.');
+          document.body.removeChild(tempDiv);
+        }
+      }, 1000);
     } catch (error) {
       console.error('Erro ao gerar relatório consolidado:', error);
       alert('Erro ao gerar relatório consolidado.');
@@ -215,100 +247,12 @@ export function MultiServiceReport({ services }) {
       ? format(new Date(dates[0] + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
       : `${format(new Date(Math.min(...dates.map(d => new Date(d)))), 'dd/MM/yyyy', { locale: ptBR })} a ${format(new Date(Math.max(...dates.map(d => new Date(d)))), 'dd/MM/yyyy', { locale: ptBR })}`;
 
-    // Preparar dados para gráficos
-    let missionTypeChartData = '';
-    let flightHoursChartData = '';
-
-    if (operationData) {
-      // Gráfico de pizza - tipos de missão
-      const missionCounts = {};
-      operationData.logs.forEach(log => {
-        const type = log.mission_type || log.mission_type_pm || 'Não especificado';
-        missionCounts[type] = (missionCounts[type] || 0) + 1;
-      });
-
-      const pieColors = ['#dc2626', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-      const pieLabels = Object.keys(missionCounts);
-      const pieValues = Object.values(missionCounts);
-
-      missionTypeChartData = `
-        <canvas id="missionPieChart" width="400" height="400"></canvas>
-        <script>
-          const pieCtx = document.getElementById('missionPieChart').getContext('2d');
-          const pieData = {
-            labels: ${JSON.stringify(pieLabels)},
-            datasets: [{
-              data: ${JSON.stringify(pieValues)},
-              backgroundColor: ${JSON.stringify(pieColors.slice(0, pieLabels.length))}
-            }]
-          };
-          new Chart(pieCtx, {
-            type: 'pie',
-            data: pieData,
-            options: {
-              responsive: false,
-              plugins: {
-                legend: { position: 'bottom' },
-                title: { display: true, text: 'Tipos de Missão da Operação' }
-              }
-            }
-          });
-        </script>
-      `;
-
-      // Gráfico de linha - horas voadas por dia
-      const dailyHours = {};
-      operationData.logs.forEach(log => {
-        const date = log.date;
-        if (!dailyHours[date]) {
-          dailyHours[date] = 0;
-        }
-        dailyHours[date] += (log.flight_duration || 0) / 60;
-      });
-
-      const sortedDates = Object.keys(dailyHours).sort();
-      const hoursValues = sortedDates.map(d => dailyHours[d].toFixed(1));
-
-      flightHoursChartData = `
-        <canvas id="hoursLineChart" width="600" height="300"></canvas>
-        <script>
-          const lineCtx = document.getElementById('hoursLineChart').getContext('2d');
-          const lineData = {
-            labels: ${JSON.stringify(sortedDates.map(d => format(new Date(d + 'T12:00:00'), 'dd/MM')))},
-            datasets: [{
-              label: 'Horas Voadas',
-              data: ${JSON.stringify(hoursValues)},
-              borderColor: '#dc2626',
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
-              tension: 0.3,
-              fill: true
-            }]
-          };
-          new Chart(lineCtx, {
-            type: 'line',
-            data: lineData,
-            options: {
-              responsive: false,
-              plugins: {
-                legend: { display: true },
-                title: { display: true, text: 'Evolução das Horas Voadas - Operação Atual' }
-              },
-              scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Horas' } }
-              }
-            }
-          });
-        </script>
-      `;
-    }
-
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
         <title>Relatório Consolidado de Serviços</title>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <style>
           @media print {
             @page { margin: 1.5cm; }
@@ -462,16 +406,7 @@ export function MultiServiceReport({ services }) {
             border-bottom: 2px solid #3b82f6;
             padding-bottom: 6px;
           }
-          .chart-container {
-            margin: 15px 0;
-            text-align: center;
-            page-break-inside: avoid;
-          }
-          .compact-chart {
-            display: inline-block;
-            width: 45%;
-            margin: 0 10px;
-          }
+
           .fueling-table {
             width: 100%;
             border-collapse: collapse;
@@ -556,14 +491,7 @@ export function MultiServiceReport({ services }) {
               </div>
             ` : ''}
 
-            <div class="chart-container">
-              <div class="compact-chart">
-                ${missionTypeChartData.replace('width="400" height="400"', 'width="280" height="280"')}
-              </div>
-              <div class="compact-chart">
-                ${flightHoursChartData.replace('width="600" height="300"', 'width="280" height="280"')}
-              </div>
-            </div>
+
           </div>
         ` : ''}
 
@@ -865,12 +793,12 @@ export function MultiServiceReport({ services }) {
             {selectedIds.length} serviço(s) selecionado(s)
           </span>
           <Button 
-            onClick={generateConsolidatedReport} 
-            disabled={isGenerating || selectedIds.length === 0}
-            className="bg-orange-600 hover:bg-orange-700"
+          onClick={generateConsolidatedReport} 
+          disabled={isGenerating || selectedIds.length === 0}
+          className="bg-orange-600 hover:bg-orange-700"
           >
-            <FileText className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Gerando...' : 'Gerar Relatório PDF'}
+          <Download className="w-4 h-4 mr-2" />
+          {isGenerating ? 'Gerando...' : 'Gerar Imagem PNG'}
           </Button>
         </div>
       </DialogContent>
