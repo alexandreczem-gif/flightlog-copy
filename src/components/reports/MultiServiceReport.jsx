@@ -90,23 +90,43 @@ export function MultiServiceReport({ services }) {
         stats: calculateStats(weekLogs, weekVictims)
       };
       
-      // Buscar todas as missões relacionadas e abastecimentos
-      const allMissions = [];
-      for (const service of selectedServices) {
+      // Agrupar serviços por aeronave/UAA
+      const groupedServices = {};
+      selectedServices.forEach(service => {
+        const key = `${service.type}_${service.name}`;
+        if (!groupedServices[key]) {
+          groupedServices[key] = [];
+        }
+        groupedServices[key].push(service);
+      });
+
+      // Buscar todas as missões e abastecimentos agrupados
+      const consolidatedData = [];
+      for (const [key, servicesGroup] of Object.entries(groupedServices)) {
+        const firstService = servicesGroup[0];
+        
+        // Buscar todas as missões do dia para essa aeronave/UAA
         const missions = await base44.entities.FlightLog.filter({ 
-          date: service.date,
-          aircraft: service.name 
+          date: firstService.date,
+          aircraft: firstService.name 
+        });
+        
+        // Ordenar missões cronologicamente
+        missions.sort((a, b) => {
+          const timeA = a.departure_time_1 || '00:00';
+          const timeB = b.departure_time_1 || '00:00';
+          return timeA.localeCompare(timeB);
         });
         
         let fuelings = [];
-        if (service.type === 'uaa') {
+        if (firstService.type === 'uaa') {
           fuelings = await base44.entities.Abastecimento.filter({
-            date: service.date,
-            uaa_plate: service.name
+            date: firstService.date,
+            uaa_plate: firstService.name
           });
         }
 
-        // Calcular estatísticas
+        // Calcular estatísticas consolidadas
         const stats = {
           rescuedVictims: missions.reduce((sum, m) => sum + (Number(m.rescued_victims_count) || 0), 0),
           orientedPeople: missions.reduce((sum, m) => sum + (Number(m.oriented_people_count) || 0), 0),
@@ -117,10 +137,22 @@ export function MultiServiceReport({ services }) {
           }, 0)
         };
         
-        allMissions.push({ service, missions, fuelings, stats });
+        consolidatedData.push({ 
+          services: servicesGroup, 
+          missions, 
+          fuelings, 
+          stats,
+          type: firstService.type,
+          name: firstService.name,
+          date: firstService.date
+        });
       }
+      
+      // Separar aeronaves de UAAs
+      const aircraftData = consolidatedData.filter(d => d.type === 'aircraft');
+      const uaaData = consolidatedData.filter(d => d.type === 'uaa');
 
-      const html = generateConsolidatedHTML(selectedServices, allMissions, operationData, weekData, todayFuelings);
+      const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, weekData, todayFuelings);
       
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
@@ -168,7 +200,7 @@ export function MultiServiceReport({ services }) {
     };
   };
 
-  const generateConsolidatedHTML = (services, serviceMissions, operationData, weekData, todayFuelings) => {
+  const generateConsolidatedHTML = (services, aircraftData, uaaData, operationData, weekData, todayFuelings) => {
     const dates = [...new Set(services.map(s => s.date))];
     const dateRange = dates.length === 1 
       ? format(new Date(dates[0] + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -476,7 +508,7 @@ export function MultiServiceReport({ services }) {
                 <div class="info-value">${operationData.stats.totalVictims}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
                 <div class="info-value">${operationData.stats.totalRescuedVictims}</div>
               </div>
               <div class="info-item">
@@ -512,7 +544,7 @@ export function MultiServiceReport({ services }) {
             </div>
             <div class="info-item">
               <div class="info-label">Total de Missões</div>
-              <div class="info-value">${serviceMissions.reduce((sum, sm) => sum + sm.missions.length, 0)}</div>
+              <div class="info-value">${aircraftData.reduce((sum, ad) => sum + ad.missions.length, 0)}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Bases Envolvidas</div>
@@ -574,7 +606,7 @@ export function MultiServiceReport({ services }) {
                 <div class="info-value">${weekData.stats.totalVictims}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
                 <div class="info-value">${weekData.stats.totalRescuedVictims}</div>
               </div>
               <div class="info-item">
@@ -589,66 +621,60 @@ export function MultiServiceReport({ services }) {
           </div>
         ` : ''}
 
-        ${serviceMissions.map(({ service, missions, fuelings, stats }) => {
-          const dateFormatted = format(new Date(service.date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
+        ${aircraftData.map(({ services: servicesGroup, missions, stats, name, date }) => {
+          const dateFormatted = format(new Date(date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
+          
+          // Coletar todas as tripulações das equipes
+          const allCrew = [];
+          servicesGroup.forEach(svc => {
+            const crewEntry = `Equipe ${svc.team}: ${svc.commander || '-'} (Cmd)${svc.copilot ? `, ${svc.copilot} (Cop)` : ''}${svc.oat_1 ? `, ${svc.oat_1} (OAT)` : ''}${svc.oat_2 ? `, ${svc.oat_2} (OAT)` : ''}${svc.oat_3 ? `, ${svc.oat_3} (OAT)` : ''}${svc.osm_1 ? `, ${svc.osm_1} (OSM)` : ''}${svc.osm_2 ? `, ${svc.osm_2} (OSM)` : ''}`;
+            allCrew.push(crewEntry);
+          });
+          
+          // Coletar todas as alterações
+          const allNotesAircraft = servicesGroup.map(s => s.notes_aircraft).filter(n => n && n !== 'Sem alterações');
+          const allNotesMaterials = servicesGroup.map(s => s.notes_materials).filter(n => n && n !== 'Sem alterações');
+          const allNotesGeneral = servicesGroup.map(s => s.notes_general).filter(n => n && n !== 'Sem alterações');
           
           return `
             <div class="service-section">
               <div class="service-header">
-                ${service.type === 'aircraft' ? '✈️ AERONAVE' : '🚗 UAA'}: ${service.name} - ${dateFormatted}
+                ✈️ AERONAVE: ${name} - ${dateFormatted}
               </div>
 
               <div class="info-grid">
                 <div class="info-item">
                   <div class="info-label">Base</div>
-                  <div class="info-value">${service.base}</div>
+                  <div class="info-value">${servicesGroup[0].base}</div>
                 </div>
                 <div class="info-item">
-                  <div class="info-label">Equipe</div>
-                  <div class="info-value">Equipe ${service.team}</div>
+                  <div class="info-label">Equipes Escaladas</div>
+                  <div class="info-value">${servicesGroup.length} equipe(s)</div>
                 </div>
                 <div class="info-item">
-                  <div class="info-label">Horário</div>
-                  <div class="info-value">${service.start_time} - ${service.end_time}</div>
+                  <div class="info-label">Total de Missões</div>
+                  <div class="info-value">${missions.length}</div>
                 </div>
                 <div class="info-item">
-                  <div class="info-label">${service.type === 'aircraft' ? 'Missões' : 'Abastecimentos'}</div>
-                  <div class="info-value">${service.type === 'aircraft' ? missions.length : (fuelings || []).length}</div>
+                  <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
+                  <div class="info-value">${stats?.rescuedVictims || 0}</div>
                 </div>
-                ${service.type === 'aircraft' ? `
-                  <div class="info-item">
-                    <div class="info-label">Vítimas Resgatadas</div>
-                    <div class="info-value">${stats?.rescuedVictims || 0}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Pessoas Orientadas</div>
-                    <div class="info-value">${stats?.orientedPeople || 0}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="info-label">Água Lançada (Litros)</div>
-                    <div class="info-value">${stats?.waterLaunched || 0} L</div>
-                  </div>
-                ` : `
-                  <div class="info-item">
-                    <div class="info-label">Combustível Final</div>
-                    <div class="info-value">${service.final_fuel || '-'} L</div>
-                  </div>
-                `}
+                <div class="info-item">
+                  <div class="info-label">Pessoas Orientadas</div>
+                  <div class="info-value">${stats?.orientedPeople || 0}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Água Lançada (Litros)</div>
+                  <div class="info-value">${stats?.waterLaunched || 0} L</div>
+                </div>
               </div>
 
-              ${service.type === 'aircraft' ? `
-                <div class="section-title">Tripulação</div>
-                <div class="info-grid">
-                  ${service.commander ? `<div class="info-item"><div class="info-label">Comandante</div><div class="info-value">${service.commander}</div></div>` : ''}
-                  ${service.copilot ? `<div class="info-item"><div class="info-label">Copiloto</div><div class="info-value">${service.copilot}</div></div>` : ''}
-                  ${service.oat_1 ? `<div class="info-item"><div class="info-label">OAT 1</div><div class="info-value">${service.oat_1}</div></div>` : ''}
-                  ${service.oat_2 ? `<div class="info-item"><div class="info-label">OAT 2</div><div class="info-value">${service.oat_2}</div></div>` : ''}
-                  ${service.osm_1 ? `<div class="info-item"><div class="info-label">OSM 1</div><div class="info-value">${service.osm_1}</div></div>` : ''}
-                  ${service.osm_2 ? `<div class="info-item"><div class="info-label">OSM 2</div><div class="info-value">${service.osm_2}</div></div>` : ''}
-                </div>
-              ` : ''}
+              <div class="section-title">Tripulação</div>
+              <div style="padding: 10px; background: #f8fafc; border-radius: 4px; font-size: 13px;">
+                ${allCrew.map(crew => `<div style="margin-bottom: 5px;">• ${crew}</div>`).join('')}
+              </div>
 
-              ${service.type === 'aircraft' && missions.length > 0 ? `
+              ${missions.length > 0 ? `
                 <div class="section-title">Missões Realizadas</div>
                 ${missions.map(mission => `
                   <div class="mission-card">
@@ -671,35 +697,80 @@ export function MultiServiceReport({ services }) {
                     ` : ''}
                   </div>
                 `).join('')}
-              ` : service.type === 'aircraft' ? '<p style="text-align: center; color: #64748b; padding: 10px;">Sem missões registradas</p>' : ''}
+              ` : '<p style="text-align: center; color: #64748b; padding: 10px;">Sem missões registradas</p>'}
 
               <div class="section-title">Alterações Registradas</div>
-              ${service.type === 'aircraft' ? `
-                ${service.notes_aircraft && service.notes_aircraft !== 'Sem alterações' ? `
-                  <div style="margin-bottom: 10px;">
-                    <strong style="color: #475569;">Alterações na Aeronave:</strong>
-                    <div class="notes-box">${service.notes_aircraft}</div>
-                  </div>
-                ` : ''}
-                ${service.notes_materials && service.notes_materials !== 'Sem alterações' ? `
-                  <div style="margin-bottom: 10px;">
-                    <strong style="color: #475569;">Alterações de Materiais:</strong>
-                    <div class="notes-box">${service.notes_materials}</div>
-                  </div>
-                ` : ''}
-                ${service.notes_general && service.notes_general !== 'Sem alterações' ? `
-                  <div style="margin-bottom: 10px;">
-                    <strong style="color: #475569;">Alterações de Caráter Geral:</strong>
-                    <div class="notes-box">${service.notes_general}</div>
-                  </div>
-                ` : ''}
-                ${(!service.notes_aircraft || service.notes_aircraft === 'Sem alterações') && 
-                  (!service.notes_materials || service.notes_materials === 'Sem alterações') && 
-                  (!service.notes_general || service.notes_general === 'Sem alterações') ? 
-                  '<p style="text-align: center; color: #64748b; padding: 10px;">Sem alterações registradas</p>' : ''}
-              ` : service.notes && service.notes !== 'Sem alterações' ? `
-                <div class="notes-box">${service.notes}</div>
-              ` : '<p style="text-align: center; color: #64748b; padding: 10px;">Sem alterações registradas</p>'}
+              ${allNotesAircraft.length > 0 ? `
+                <div style="margin-bottom: 10px;">
+                  <strong style="color: #475569;">Alterações na Aeronave:</strong>
+                  ${allNotesAircraft.map((note, idx) => `
+                    <div class="notes-box" style="margin-top: 5px;">
+                      <strong>Equipe ${servicesGroup[servicesGroup.findIndex(s => s.notes_aircraft === note)].team}:</strong> ${note}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              ${allNotesMaterials.length > 0 ? `
+                <div style="margin-bottom: 10px;">
+                  <strong style="color: #475569;">Alterações de Materiais:</strong>
+                  ${allNotesMaterials.map((note, idx) => `
+                    <div class="notes-box" style="margin-top: 5px;">
+                      <strong>Equipe ${servicesGroup[servicesGroup.findIndex(s => s.notes_materials === note)].team}:</strong> ${note}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              ${allNotesGeneral.length > 0 ? `
+                <div style="margin-bottom: 10px;">
+                  <strong style="color: #475569;">Alterações de Caráter Geral:</strong>
+                  ${allNotesGeneral.map((note, idx) => `
+                    <div class="notes-box" style="margin-top: 5px;">
+                      <strong>Equipe ${servicesGroup[servicesGroup.findIndex(s => s.notes_general === note)].team}:</strong> ${note}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              ${allNotesAircraft.length === 0 && allNotesMaterials.length === 0 && allNotesGeneral.length === 0 ? 
+                '<p style="text-align: center; color: #64748b; padding: 10px;">Sem alterações registradas</p>' : ''}
+            </div>
+          `;
+        }).join('')}
+
+        ${uaaData.map(({ services: servicesGroup, fuelings, name, date }) => {
+          const dateFormatted = format(new Date(date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
+          const allNotesUAA = servicesGroup.map(s => s.notes).filter(n => n && n !== 'Sem alterações');
+          
+          return `
+            <div class="service-section">
+              <div class="service-header">
+                🚗 UAA: ${name} - ${dateFormatted}
+              </div>
+
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Base</div>
+                  <div class="info-value">${servicesGroup[0].base}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Equipes Escaladas</div>
+                  <div class="info-value">${servicesGroup.length} equipe(s)</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Abastecimentos</div>
+                  <div class="info-value">${fuelings.length}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Total Abastecido</div>
+                  <div class="info-value">${fuelings.reduce((sum, f) => sum + (Number(f.quantity_liters) || 0), 0)} L</div>
+                </div>
+              </div>
+
+              <div class="section-title">Alterações Registradas</div>
+              ${allNotesUAA.length > 0 ? allNotesUAA.map((note, idx) => `
+                <div class="notes-box" style="margin-bottom: 5px;">
+                  <strong>Equipe ${servicesGroup[servicesGroup.findIndex(s => s.notes === note)].team}:</strong> ${note}
+                </div>
+              `).join('') : '<p style="text-align: center; color: #64748b; padding: 10px;">Sem alterações registradas</p>'}
             </div>
           `;
         }).join('')}

@@ -285,7 +285,7 @@ export function ServiceReportButton({ service }) {
                 <div class="info-value">${missions.length}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Vítimas Resgatadas</div>
+                <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
                 <div class="info-value">${stats.rescuedVictims || 0}</div>
               </div>
               <div class="info-item">

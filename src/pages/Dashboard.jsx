@@ -364,7 +364,7 @@ export default function Dashboard() {
                 isLoading={isLoading}
               />
               <StatsCard 
-                title="Vítimas Resgatadas"
+                title="Vítimas Resgatadas em Operações Helitransportadas"
                 value={operationStats.totalRescuedVictims}
                 icon={Users}
                 color="teal"
@@ -439,7 +439,7 @@ export default function Dashboard() {
               isLoading={isLoading}
               />
               <StatsCard 
-                title="Vítimas Resgatadas"
+                title="Vítimas Resgatadas em Operações Helitransportadas"
                 value={totalStats.totalRescuedVictims}
                 icon={Users}
                 color="teal"
