@@ -542,7 +542,7 @@ export function MultiServiceReport({ services }) {
                 <table class="fueling-table">
                   <thead>
                     <tr>
-                      ${operationData.drowningStats.map(stat => `<th>${stat.grade}</th>`).join('')}
+                      ${operationData.drowningStats.map(stat => `<th style="${stat.grade === 'Somente Resgate' ? 'width: 80px;' : ''}">${stat.grade === 'Somente Resgate' ? 'S.Resgate' : stat.grade}</th>`).join('')}
                       <th style="background: #1e40af;">Total</th>
                     </tr>
                   </thead>
