@@ -722,30 +722,6 @@ export function MultiServiceReport({ services }) {
           </div>
         ` : ''}
 
-        <div class="summary-box">
-          <h3>Resumo Geral</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="info-label">Total de Aeronaves</div>
-              <div class="info-value">${[...new Set(services.filter(s => s.type === 'aircraft').map(s => s.name))].length}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Total de UAAs</div>
-              <div class="info-value">${[...new Set(services.filter(s => s.type === 'uaa').map(s => s.name))].length}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Total de Missões</div>
-              <div class="info-value">${aircraftData.reduce((sum, ad) => sum + ad.missions.length, 0)}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Bases Envolvidas</div>
-              <div class="info-value">${[...new Set(services.map(s => s.base))].join(', ')}</div>
-            </div>
-          </div>
-        </div>
-
-
-
         ${aircraftData.map(({ services: servicesGroup, missions, stats, name, date }) => {
           const dateFormatted = format(new Date(date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
           
