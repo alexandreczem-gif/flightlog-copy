@@ -335,6 +335,7 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                       <Select value={data.grau_afogamento} onValueChange={v => handleChange('grau_afogamento', v)}>
                         <SelectTrigger id="grau_afogamento"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Somente Resgate">Somente Resgate</SelectItem>
                           <SelectItem value="1">1</SelectItem>
                           <SelectItem value="2">2</SelectItem>
                           <SelectItem value="3">3</SelectItem>

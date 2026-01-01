@@ -62,12 +62,23 @@ export function MultiServiceReport({ services }) {
             return matchesDate && matchesBase;
           });
 
+          // Calcular estatísticas de afogamento
+          const drowningStats = [];
+          const grades = ['Somente Resgate', '1', '2', '3', '4', '5', '6'];
+          grades.forEach(grade => {
+            const count = operationVictims.filter(v => v.grau_afogamento === grade).length;
+            if (count > 0) {
+              drowningStats.push({ grade, count });
+            }
+          });
+
           operationData = {
             startDate: opStartDate,
             base: opBase,
             logs: operationLogs,
             victims: operationVictims,
-            stats: calculateStats(operationLogs, operationVictims)
+            stats: calculateStats(operationLogs, operationVictims),
+            drowningStats: drowningStats.length > 0 ? drowningStats : null
           };
         }
       }
@@ -521,6 +532,32 @@ export function MultiServiceReport({ services }) {
               </div>
             </div>
 
+            ${operationData.drowningStats ? `
+              <div style="margin-top: 20px;">
+                <h4 style="color: #1e40af; margin-bottom: 10px; font-size: 16px; font-weight: bold;">Afogamentos Atendidos por Grau</h4>
+                <table class="fueling-table">
+                  <thead>
+                    <tr>
+                      <th>Grau de Afogamento</th>
+                      <th>Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${operationData.drowningStats.map(stat => `
+                      <tr>
+                        <td>${stat.grade}</td>
+                        <td><strong>${stat.count}</strong></td>
+                      </tr>
+                    `).join('')}
+                    <tr style="background: #dbeafe; font-weight: bold;">
+                      <td>Total de Afogamentos</td>
+                      <td>${operationData.drowningStats.reduce((sum, s) => sum + s.count, 0)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+
             <div class="chart-container">
               ${missionTypeChartData}
             </div>
@@ -552,39 +589,6 @@ export function MultiServiceReport({ services }) {
             </div>
           </div>
         </div>
-
-        ${todayFuelings && todayFuelings.length > 0 ? `
-          <div class="stats-section">
-            <h3>📊 Abastecimentos Realizados no Dia</h3>
-            <table class="fueling-table">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Tipo</th>
-                  <th>Aeronave/UAA</th>
-                  <th>Quantidade (L)</th>
-                  <th>Nota Fiscal</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${todayFuelings.map(f => `
-                  <tr>
-                    <td>${f.time || '-'}</td>
-                    <td>${f.uaa_abastecimento ? 'Entrada UAA' : 'Saída para Aeronave'}</td>
-                    <td>${f.uaa_abastecimento ? f.uaa_plate || '-' : (f.aircraft_designator || f.aircraft_prefix || '-')}</td>
-                    <td><strong>${f.quantity_liters || 0} L</strong></td>
-                    <td>${f.nota_numero || '-'}</td>
-                  </tr>
-                `).join('')}
-                <tr style="background: #fef3c7; font-weight: bold;">
-                  <td colspan="3">Total Abastecido</td>
-                  <td>${todayFuelings.reduce((sum, f) => sum + (Number(f.quantity_liters) || 0), 0)} L</td>
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ` : ''}
 
         ${weekData ? `
           <div class="stats-section">
@@ -774,6 +778,39 @@ export function MultiServiceReport({ services }) {
             </div>
           `;
         }).join('')}
+
+        ${todayFuelings && todayFuelings.length > 0 ? `
+          <div class="stats-section">
+            <h3>📊 Abastecimentos Realizados no Dia</h3>
+            <table class="fueling-table">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Aeronave/UAA</th>
+                  <th>Quantidade (L)</th>
+                  <th>Nota Fiscal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${todayFuelings.map(f => `
+                  <tr>
+                    <td>${f.time || '-'}</td>
+                    <td>${f.uaa_abastecimento ? 'Entrada UAA' : 'Saída para Aeronave'}</td>
+                    <td>${f.uaa_abastecimento ? f.uaa_plate || '-' : (f.aircraft_designator || f.aircraft_prefix || '-')}</td>
+                    <td><strong>${f.quantity_liters || 0} L</strong></td>
+                    <td>${f.nota_numero || '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr style="background: #fef3c7; font-weight: bold;">
+                  <td colspan="3">Total Abastecido</td>
+                  <td>${todayFuelings.reduce((sum, f) => sum + (Number(f.quantity_liters) || 0), 0)} L</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
 
         <div class="footer">
           <p>Relatório consolidado gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
