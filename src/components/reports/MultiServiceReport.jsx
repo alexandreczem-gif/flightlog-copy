@@ -3,10 +3,11 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import html2canvas from 'html2canvas';
 
 export function MultiServiceReport({ services }) {
   const [open, setOpen] = useState(false);
@@ -21,7 +22,7 @@ export function MultiServiceReport({ services }) {
     );
   };
 
-  const generateConsolidatedReport = async () => {
+  const generateConsolidatedImage = async () => {
     if (selectedIds.length === 0) {
       alert('Selecione pelo menos um serviço para gerar o relatório.');
       return;
@@ -31,7 +32,7 @@ export function MultiServiceReport({ services }) {
     try {
       const selectedServices = services.filter(s => selectedIds.includes(s.id));
       const serviceDate = selectedServices[0]?.date;
-      
+
       // Buscar dados adicionais
       const [operationSettings, allFlightLogs, allVictimRecords, todayFuelings] = await Promise.all([
         base44.entities.OperationSettings.list(),
@@ -42,8 +43,7 @@ export function MultiServiceReport({ services }) {
 
       // Processar dados da operação
       let operationData = null;
-      let weekData = null;
-      
+
       if (operationSettings.length > 0) {
         const settings = operationSettings[0];
         const opStartDate = settings.operation_start_date;
@@ -81,23 +81,175 @@ export function MultiServiceReport({ services }) {
         }
       }
 
-      // Dados da última semana (desde quarta-feira)
-      const today = new Date(serviceDate + 'T12:00:00');
-      const dayOfWeek = today.getDay();
-      const daysToWednesday = (dayOfWeek + 4) % 7;
-      const lastWednesday = new Date(today);
-      lastWednesday.setDate(today.getDate() - daysToWednesday);
-      const lastWednesdayStr = format(lastWednesday, 'yyyy-MM-dd');
+      // Agrupar serviços por aeronave/UAA
+      const groupedServices = {};
+      selectedServices.forEach(service => {
+        const key = `${service.type}_${service.name}`;
+        if (!groupedServices[key]) {
+          groupedServices[key] = [];
+        }
+        groupedServices[key].push(service);
+      });
 
-      const weekLogs = allFlightLogs.filter(log => log.date >= lastWednesdayStr && log.date <= serviceDate);
-      const weekVictims = allVictimRecords.filter(r => r.data >= lastWednesdayStr && r.data <= serviceDate && r.pending_registration !== false);
+      // Buscar todas as missões e abastecimentos agrupados
+      const consolidatedData = [];
+      for (const [key, servicesGroup] of Object.entries(groupedServices)) {
+        const firstService = servicesGroup[0];
 
-      weekData = {
-        startDate: lastWednesdayStr,
-        logs: weekLogs,
-        victims: weekVictims,
-        stats: calculateStats(weekLogs, weekVictims)
-      };
+        // Buscar todas as missões do dia para essa aeronave/UAA
+        const missions = await base44.entities.FlightLog.filter({ 
+          date: firstService.date,
+          aircraft: firstService.name 
+        });
+
+        // Ordenar missões cronologicamente
+        missions.sort((a, b) => {
+          const timeA = a.departure_time_1 || '00:00';
+          const timeB = b.departure_time_1 || '00:00';
+          return timeA.localeCompare(timeB);
+        });
+
+        let fuelings = [];
+        if (firstService.type === 'uaa') {
+          fuelings = await base44.entities.Abastecimento.filter({
+            date: firstService.date,
+            uaa_plate: firstService.name
+          });
+        }
+
+        // Calcular estatísticas consolidadas
+        const stats = {
+          rescuedVictims: missions.reduce((sum, m) => sum + (Number(m.rescued_victims_count) || 0), 0),
+          orientedPeople: missions.reduce((sum, m) => sum + (Number(m.oriented_people_count) || 0), 0),
+          waterLaunched: missions.reduce((sum, m) => {
+            const launches = Number(m.helibalde_launches) || 0;
+            const load = Number(m.helibalde_load_liters) || 0;
+            return sum + (launches * load);
+          }, 0)
+        };
+
+        consolidatedData.push({ 
+          services: servicesGroup, 
+          missions, 
+          fuelings, 
+          stats,
+          type: firstService.type,
+          name: firstService.name,
+          date: firstService.date
+        });
+      }
+
+      // Separar aeronaves de UAAs
+      const aircraftData = consolidatedData.filter(d => d.type === 'aircraft');
+      const uaaData = consolidatedData.filter(d => d.type === 'uaa');
+
+      const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, todayFuelings);
+
+      // Criar um iframe temporário para renderizar o HTML
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '210mm';
+      iframe.style.height = '297mm';
+      document.body.appendChild(iframe);
+
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+
+      // Aguardar carregamento das fontes e imagens
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Capturar como imagem
+      const canvas = await html2canvas(iframe.contentDocument.body, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Converter para PNG e fazer download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio-consolidado-${serviceDate}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      // Remover iframe
+      document.body.removeChild(iframe);
+
+      setOpen(false);
+      setSelectedIds([]);
+    } catch (error) {
+      console.error('Erro ao gerar relatório consolidado:', error);
+      alert('Erro ao gerar relatório consolidado.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const generateConsolidatedReport = async () => {
+    if (selectedIds.length === 0) {
+      alert('Selecione pelo menos um serviço para gerar o relatório.');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const selectedServices = services.filter(s => selectedIds.includes(s.id));
+      const serviceDate = selectedServices[0]?.date;
+      
+      // Buscar dados adicionais
+      const [operationSettings, allFlightLogs, allVictimRecords, todayFuelings] = await Promise.all([
+        base44.entities.OperationSettings.list(),
+        base44.entities.FlightLog.list('-date', 1000),
+        base44.entities.VictimRecord.list('-data', 2000),
+        base44.entities.Abastecimento.filter({ date: serviceDate })
+      ]);
+
+      // Processar dados da operação
+      let operationData = null;
+      
+      if (operationSettings.length > 0) {
+        const settings = operationSettings[0];
+        const opStartDate = settings.operation_start_date;
+        const opBase = settings.operation_base;
+
+        if (opStartDate) {
+          let operationLogs = allFlightLogs.filter(log => log.date >= opStartDate);
+          if (opBase) {
+            operationLogs = operationLogs.filter(log => log.base === opBase);
+          }
+
+          const operationVictims = allVictimRecords.filter(r => {
+            if (!r.data || r.pending_registration !== false) return false;
+            const matchesDate = r.data >= opStartDate;
+            const matchesBase = opBase ? r.base === opBase : true;
+            return matchesDate && matchesBase;
+          });
+
+          // Calcular estatísticas de afogamento - todas as opções
+          const drowningStats = [];
+          const grades = ['Somente Resgate', '1', '2', '3', '4', '5', '6'];
+          grades.forEach(grade => {
+            const count = operationVictims.filter(v => v.grau_afogamento === grade).length;
+            drowningStats.push({ grade, count });
+          });
+
+          operationData = {
+            startDate: opStartDate,
+            base: opBase,
+            logs: operationLogs,
+            victims: operationVictims,
+            stats: calculateStats(operationLogs, operationVictims),
+            drowningStats
+          };
+        }
+        }
       
       // Agrupar serviços por aeronave/UAA
       const groupedServices = {};
@@ -161,12 +313,12 @@ export function MultiServiceReport({ services }) {
       const aircraftData = consolidatedData.filter(d => d.type === 'aircraft');
       const uaaData = consolidatedData.filter(d => d.type === 'uaa');
 
-      const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, weekData, todayFuelings);
-      
+      const html = generateConsolidatedHTML(selectedServices, aircraftData, uaaData, operationData, todayFuelings);
+
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
       printWindow.document.close();
-      
+
       setTimeout(() => {
         printWindow.print();
         setOpen(false);
@@ -209,7 +361,7 @@ export function MultiServiceReport({ services }) {
     };
   };
 
-  const generateConsolidatedHTML = (services, aircraftData, uaaData, operationData, weekData, todayFuelings) => {
+  const generateConsolidatedHTML = (services, aircraftData, uaaData, operationData, todayFuelings) => {
     const dates = [...new Set(services.map(s => s.date))];
     const dateRange = dates.length === 1 
       ? format(new Date(dates[0] + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -542,8 +694,11 @@ export function MultiServiceReport({ services }) {
                 <table class="fueling-table">
                   <thead>
                     <tr>
-                      ${operationData.drowningStats.map(stat => `<th>${stat.grade}</th>`).join('')}
-                      <th style="background: #1e40af;">Total</th>
+                      ${operationData.drowningStats.map((stat, idx) => {
+                        const width = stat.grade === 'Somente Resgate' ? 'width: 80px;' : '';
+                        return `<th style="text-align: center; ${width}">${stat.grade}</th>`;
+                      }).join('')}
+                      <th style="background: #1e40af; text-align: center;">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -589,40 +744,7 @@ export function MultiServiceReport({ services }) {
           </div>
         </div>
 
-        ${weekData ? `
-          <div class="stats-section">
-            <h3>👥 Dados de Voo da Tripulação da Semana</h3>
-            <p style="color: #1e40af; margin-bottom: 15px;">
-              <strong>Período:</strong> Desde ${format(new Date(weekData.startDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-            </p>
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Total de Voos</div>
-                <div class="info-value">${weekData.stats.totalFlights}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Horas Voadas</div>
-                <div class="info-value">${weekData.stats.formattedHours}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Vítimas/Pacientes</div>
-                <div class="info-value">${weekData.stats.totalVictims}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Vítimas Resgatadas em Operações Helitransportadas</div>
-                <div class="info-value">${weekData.stats.totalRescuedVictims}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Pessoas Orientadas</div>
-                <div class="info-value">${weekData.stats.totalOrientedPeople}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Operações Helitransportadas</div>
-                <div class="info-value">${weekData.stats.totalHeliOperations}</div>
-              </div>
-            </div>
-          </div>
-        ` : ''}
+
 
         ${aircraftData.map(({ services: servicesGroup, missions, stats, name, date }) => {
           const dateFormatted = format(new Date(date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
@@ -864,14 +986,25 @@ export function MultiServiceReport({ services }) {
           <span className="text-sm text-slate-600">
             {selectedIds.length} serviço(s) selecionado(s)
           </span>
-          <Button 
-            onClick={generateConsolidatedReport} 
-            disabled={isGenerating || selectedIds.length === 0}
-            className="bg-orange-600 hover:bg-orange-700"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Gerando...' : 'Gerar Relatório PDF'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={generateConsolidatedImage} 
+              disabled={isGenerating || selectedIds.length === 0}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <Image className="w-4 h-4 mr-2" />
+              {isGenerating ? 'Gerando...' : 'Gerar PNG'}
+            </Button>
+            <Button 
+              onClick={generateConsolidatedReport} 
+              disabled={isGenerating || selectedIds.length === 0}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              {isGenerating ? 'Gerando...' : 'Gerar PDF'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
