@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -104,6 +104,48 @@ export default function AuditLogs() {
     }
   };
 
+  const exportToCSV = () => {
+    if (filteredLogs.length === 0) {
+      alert('Nenhum log para exportar.');
+      return;
+    }
+
+    const headers = [
+      'Data/Hora',
+      'Nome do Usuário',
+      'Email do Usuário',
+      'Ação',
+      'Entidade',
+      'ID da Entidade',
+      'Detalhes'
+    ];
+
+    const rows = filteredLogs.map(log => [
+      format(new Date(log.timestamp), "dd/MM/yyyy HH:mm", { locale: ptBR }),
+      log.user_name || '',
+      log.user_email || '',
+      log.action || '',
+      log.entity_name || '',
+      log.entity_id || '',
+      log.details || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `logs-auditoria-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-slate-50">
       <div className="max-w-7xl mx-auto">
@@ -112,10 +154,20 @@ export default function AuditLogs() {
             <h1 className="text-3xl font-bold text-slate-900">Logs de Auditoria</h1>
             <p className="text-slate-600">Histórico de ações realizadas no sistema.</p>
           </div>
-          <Button onClick={loadLogs} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={exportToCSV}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exportar CSV
+            </Button>
+            <Button onClick={loadLogs} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-6">
