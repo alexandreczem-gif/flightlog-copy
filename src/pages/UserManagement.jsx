@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, Search } from "lucide-react";
+import { UserPlus, Search, Download, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,8 @@ export default function UserManagement() {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = React.useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,6 +87,144 @@ export default function UserManagement() {
     }
   };
 
+  const exportToCSV = () => {
+    if (filteredUsers.length === 0) {
+      alert('Nenhum usuário para exportar.');
+      return;
+    }
+
+    const headers = [
+      'Nome Completo',
+      'Email',
+      'Nível de Acesso',
+      'Posto/Graduação',
+      'Nome de Guerra',
+      'Trigrama',
+      'CPF',
+      'Telefone',
+      'Data de Criação'
+    ];
+
+    const rows = filteredUsers.map(user => [
+      user.full_name || '',
+      user.email || '',
+      user.flight_log_role || 'Indefinido',
+      user.posto_graduacao || '',
+      user.nome_de_guerra || '',
+      user.trigrama || '',
+      user.cpf || '',
+      user.telefone || '',
+      user.created_date || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `usuarios-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const confirm = window.confirm(
+      'AVISO: A importação de usuários não cria contas automaticamente.\n\n' +
+      'Esta funcionalidade importa apenas dados adicionais de usuários existentes (posto, nome de guerra, etc.).\n\n' +
+      'Para criar novos usuários, use o botão "Convidar Novo Usuário".\n\n' +
+      'Formato esperado do CSV:\n' +
+      'Email,Nível de Acesso,Posto/Graduação,Nome de Guerra,Trigrama\n\n' +
+      'Deseja continuar?'
+    );
+
+    if (!confirm) {
+      e.target.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    
+    reader.onload = async (event) => {
+      try {
+        const text = event.target.result;
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          alert('Arquivo CSV vazio ou inválido.');
+          return;
+        }
+
+        const dataToImport = [];
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          
+          const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/"/g, '').trim());
+          
+          if (values && values.length >= 2) {
+            const email = values[0]?.toLowerCase();
+            const userData = {
+              flight_log_role: values[1] || 'Indefinido',
+              posto_graduacao: values[2] || '',
+              nome_de_guerra: values[3] || '',
+              trigrama: values[4]?.toUpperCase() || ''
+            };
+            
+            if (!email) {
+              errors.push(`Linha ${i + 1}: Email obrigatório`);
+              continue;
+            }
+
+            const existingUser = users.find(u => u.email === email);
+            if (!existingUser) {
+              errors.push(`Linha ${i + 1}: Usuário ${email} não encontrado no sistema`);
+              continue;
+            }
+            
+            dataToImport.push({ userId: existingUser.id, ...userData });
+          }
+        }
+
+        if (errors.length > 0) {
+          alert('Avisos:\n\n' + errors.join('\n'));
+        }
+
+        if (dataToImport.length > 0) {
+          await Promise.all(dataToImport.map(({ userId, ...data }) => 
+            base44.entities.User.update(userId, data)
+          ));
+          alert(`${dataToImport.length} usuário(s) atualizado(s) com sucesso!`);
+          loadUsers();
+        } else {
+          alert('Nenhum dado válido encontrado para importação.');
+        }
+      } catch (error) {
+        console.error('Erro na importação:', error);
+        alert('Erro ao processar o arquivo: ' + error.message);
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-slate-50">
       <div className="max-w-7xl mx-auto">
@@ -101,12 +241,38 @@ export default function UserManagement() {
               Gerencie usuários e seus níveis de acesso.
             </p>
           </div>
-          <a href="/dashboard/users" target="_blank" rel="noopener noreferrer">
-             <Button className="bg-red-700 hover:bg-red-800 text-white">
+          <div className="flex gap-2">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              accept=".csv" 
+              className="hidden" 
+            />
+            <Button 
+              onClick={handleImportClick}
+              disabled={isImporting}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {isImporting ? 'Importando...' : 'Importar CSV'}
+            </Button>
+            <Button 
+              onClick={exportToCSV}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exportar CSV
+            </Button>
+            <a href="/dashboard/users" target="_blank" rel="noopener noreferrer">
+              <Button className="bg-red-700 hover:bg-red-800 text-white">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Convidar Novo Usuário
-             </Button>
-          </a>
+              </Button>
+            </a>
+          </div>
         </motion.div>
 
         <motion.div 
