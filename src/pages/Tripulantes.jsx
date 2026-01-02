@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Download, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -177,19 +177,39 @@ export default function Tripulantes() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['nome_de_guerra', 'trigrama', 'funcao'];
+    if (filteredTripulantes.length === 0) {
+      alert('Nenhum tripulante para exportar.');
+      return;
+    }
+
+    const headers = [
+      'Posto/Graduação',
+      'Nome de Guerra',
+      'Trigrama',
+      'Função',
+      'Criado Por',
+      'Data de Criação'
+    ];
+
+    const rows = filteredTripulantes.map(t => [
+      t.posto_graduacao || '',
+      t.nome_de_guerra || '',
+      t.trigrama || '',
+      t.funcao || '',
+      t.created_by || '',
+      t.created_date || ''
+    ]);
+
     const csvContent = [
       headers.join(','),
-      ...filteredTripulantes.map(t => 
-        headers.map(h => `"${t[h] || ''}"`).join(',')
-      )
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `tripulantes_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `tripulantes-${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -203,51 +223,83 @@ export default function Tripulantes() {
     const file = e.target.files[0];
     if (!file) return;
 
+    const confirm = window.confirm(
+      'Tem certeza que deseja importar os tripulantes?\n\n' +
+      'Formato esperado do CSV:\n' +
+      'Posto/Graduação,Nome de Guerra,Trigrama,Função\n\n' +
+      'Exemplo:\n' +
+      'Capitão,Silva,SLV,Piloto\n' +
+      '1º Sargento,Santos,SNT,OAT'
+    );
+
+    if (!confirm) {
+      e.target.value = '';
+      return;
+    }
+
     setIsImporting(true);
     const reader = new FileReader();
     
     reader.onload = async (event) => {
       try {
         const text = event.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const lines = text.split('\n').filter(line => line.trim());
         
-        const validHeaders = ['nome_de_guerra', 'trigrama', 'funcao'];
-        if (!validHeaders.every(h => headers.includes(h))) {
-          alert('Formato de CSV inválido. Cabeçalhos esperados: nome_de_guerra, trigrama, funcao');
+        if (lines.length < 2) {
+          alert('Arquivo CSV vazio ou inválido.');
           return;
         }
 
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
         const dataToImport = [];
+        const errors = [];
+
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           
-          // Split respecting quotes
           const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/"/g, '').trim());
           
-          if (values && values.length >= 3) {
-            const row = {};
-            headers.forEach((h, idx) => row[h] = values[idx]);
+          if (values && values.length >= 4) {
+            const tripulante = {
+              posto_graduacao: values[0] || '',
+              nome_de_guerra: values[1] || '',
+              trigrama: values[2]?.toUpperCase() || '',
+              funcao: values[3] || ''
+            };
             
-            // Basic validation
-            if (row.nome_de_guerra && row.trigrama && row.funcao) {
-              dataToImport.push(row);
+            // Validação
+            if (!tripulante.nome_de_guerra) {
+              errors.push(`Linha ${i + 1}: Nome de Guerra obrigatório`);
+              continue;
             }
+            if (!tripulante.trigrama || tripulante.trigrama.length !== 3) {
+              errors.push(`Linha ${i + 1}: Trigrama deve ter 3 letras`);
+              continue;
+            }
+            if (!['Piloto', 'OAT', 'OSM', 'TASA'].includes(tripulante.funcao)) {
+              errors.push(`Linha ${i + 1}: Função inválida (use: Piloto, OAT, OSM ou TASA)`);
+              continue;
+            }
+            
+            dataToImport.push(tripulante);
           }
         }
 
+        if (errors.length > 0) {
+          alert('Erros encontrados:\n\n' + errors.join('\n'));
+        }
+
         if (dataToImport.length > 0) {
-          // Import one by one to handle potential errors individually or use bulk if available (API says create_entity_records for sample data, but we should use create for real usage usually, but bulk create might be efficient)
-          // Using Promise.all for efficiency
           await Promise.all(dataToImport.map(data => base44.entities.Tripulante.create(data)));
-          alert(`${dataToImport.length} tripulantes importados com sucesso!`);
+          alert(`${dataToImport.length} tripulante(s) importado(s) com sucesso!`);
           loadTripulantes();
         } else {
           alert('Nenhum dado válido encontrado para importação.');
         }
       } catch (error) {
         console.error('Erro na importação:', error);
-        alert('Erro ao processar o arquivo.');
+        alert('Erro ao processar o arquivo: ' + error.message);
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -282,15 +334,17 @@ export default function Tripulantes() {
                 onClick={handleImportClick}
                 disabled={isImporting}
                 variant="outline"
-                className="border-slate-300 text-slate-700"
+                className="border-green-600 text-green-600 hover:bg-green-50"
               >
+                <Upload className="w-4 h-4 mr-2" />
                 {isImporting ? 'Importando...' : 'Importar CSV'}
               </Button>
               <Button 
                 onClick={handleExportCSV}
                 variant="outline"
-                className="border-slate-300 text-slate-700"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
               >
+                <Download className="w-4 h-4 mr-2" />
                 Exportar CSV
               </Button>
               <Button 
