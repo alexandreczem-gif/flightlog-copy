@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from 'date-fns';
-import { Search, Plane, Truck, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plane, Truck, Pencil, Trash2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ServiceReportButton } from '@/components/reports/ServiceReport';
@@ -100,6 +100,84 @@ export default function ServiceRecords() {
     }
   };
 
+  const exportToCSV = () => {
+    if (filteredRecords.length === 0) {
+      alert('Nenhum registro para exportar.');
+      return;
+    }
+
+    const headers = [
+      'Data',
+      'Tipo',
+      'Nome/Placa',
+      'Equipe',
+      'Base',
+      'Horário Início',
+      'Horário Término',
+      'Comandante',
+      'Copiloto',
+      'OAT 1',
+      'OAT 2',
+      'OAT 3',
+      'OSM 1',
+      'OSM 2',
+      'TASA',
+      'Combustível Inicial',
+      'Combustível Drenado',
+      'Combustível Final',
+      'Observações (Aeronave)',
+      'Observações (Materiais)',
+      'Observações (Geral)',
+      'Observações (UAA)',
+      'Status',
+      'Criado Por',
+      'Data de Criação'
+    ];
+
+    const rows = filteredRecords.map(record => [
+      record.date || '',
+      record.type === 'aircraft' ? 'Aeronave' : 'UAA',
+      record.name || '',
+      record.team || '',
+      record.base || '',
+      record.start_time || '',
+      record.end_time || '',
+      record.commander || '',
+      record.copilot || '',
+      record.oat_1 || '',
+      record.oat_2 || '',
+      record.oat_3 || '',
+      record.osm_1 || '',
+      record.osm_2 || '',
+      record.tasa || '',
+      record.initial_fuel || '',
+      record.drained_fuel || '',
+      record.final_fuel || '',
+      record.notes_aircraft || '',
+      record.notes_materials || '',
+      record.notes_general || '',
+      record.notes || '',
+      record.status || '',
+      record.created_by || '',
+      record.created_date || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historico-servico-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   useEffect(() => {
     let results = records;
     if (searchTerm) {
@@ -124,7 +202,19 @@ export default function ServiceRecords() {
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Histórico de Serviço</h1>
             <p className="text-slate-600">Registros de serviços encerrados de aeronaves e UAAs.</p>
           </div>
-          <MultiServiceReport services={records} />
+          <div className="flex gap-2">
+            {currentUser?.role === 'admin' && (
+              <Button 
+                onClick={exportToCSV} 
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+            )}
+            <MultiServiceReport services={records} />
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
