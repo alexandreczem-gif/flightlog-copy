@@ -236,29 +236,55 @@ export default function AbastecimentosPage() {
     try {
       // Buscar TODOS os registros sem filtro de data
       const allData = await base44.entities.Abastecimento.list('-date', 50000);
-      const schema = await base44.entities.Abastecimento.schema();
-      const headers = Object.keys(schema.properties);
+      
+      if (allData.length === 0) {
+        alert('Nenhum abastecimento para exportar.');
+        return;
+      }
+
+      const headers = [
+        'Data',
+        'Hora',
+        'Prefixo Aeronave',
+        'Designativo Aeronave',
+        'Quantidade (L)',
+        'Abastecimento UAA',
+        'Placa UAA',
+        'Número Nota',
+        'Criado Por',
+        'Data de Criação'
+      ];
+
+      const rows = allData.map(record => [
+        record.date || '',
+        record.time || '',
+        record.aircraft_prefix || '',
+        record.aircraft_designator || '',
+        record.quantity_liters || '',
+        record.uaa_abastecimento ? 'Sim' : 'Não',
+        record.uaa_plate || '',
+        record.nota_numero || '',
+        record.created_by || '',
+        record.created_date || ''
+      ]);
+
       const csvContent = [
         headers.join(','),
-        ...allData.map(log => 
-          headers.map(header => {
-            const value = log[header] !== undefined && log[header] !== null ? String(log[header]) : '';
-            return `"${value.replace(/"/g, '""')}"`;
-          }).join(',')
-        )
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       ].join('\n');
 
-      const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `abastecimentos_todos_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `abastecimentos-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (error) {
       console.error("Erro ao exportar dados:", error);
-      alert("Ocorreu um erro ao gerar o arquivo CSV.");
+      alert("Ocorreu um erro ao gerar o arquivo CSV: " + error.message);
     } finally {
       setIsExporting(false);
     }
