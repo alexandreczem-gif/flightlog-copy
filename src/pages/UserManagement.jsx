@@ -146,7 +146,7 @@ export default function UserManagement() {
       'Esta funcionalidade importa apenas dados adicionais de usuários existentes (posto, nome de guerra, etc.).\n\n' +
       'Para criar novos usuários, use o botão "Convidar Novo Usuário".\n\n' +
       'Formato esperado do CSV:\n' +
-      'Email,Nível de Acesso,Posto/Graduação,Nome de Guerra,Trigrama\n\n' +
+      'Email,Nível de Acesso,Posto/Graduação,Nome de Guerra,Trigrama,Telefone\n\n' +
       'Deseja continuar?'
     );
 
@@ -182,7 +182,8 @@ export default function UserManagement() {
               flight_log_role: values[1] || 'Indefinido',
               posto_graduacao: values[2] || '',
               nome_de_guerra: values[3] || '',
-              trigrama: values[4]?.toUpperCase() || ''
+              trigrama: values[4]?.toUpperCase() || '',
+              telefone: values[5] || ''
             };
             
             if (!email) {
