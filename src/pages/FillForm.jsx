@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Form, FormResponse } from "@/entities/all";
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,20 @@ export default function FillForm() {
         data: formData,
         status: 'completed'
       });
+
+      // Sync to Google Sheets
+      try {
+        const { base44 } = await import('@/api/base44Client');
+        await base44.functions.invoke('syncFormToSheets', {
+          form_id: form.id,
+          form_name: form.name,
+          response_data: formData
+        });
+      } catch (sheetsError) {
+        console.error("Erro ao sincronizar com Google Sheets:", sheetsError);
+        // Don't block the user if sheets sync fails
+      }
+
       navigate(createPageUrl("ViewData") + `?form=${form.id}`);
     } catch (error) {
       console.error("Erro ao salvar resposta:", error);
