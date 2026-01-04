@@ -23,7 +23,8 @@ export default function EditUserProfile() {
         trigrama: '',
         cpf: '',
         data_nascimento: '',
-        crm_coren: ''
+        crm_coren: '',
+        telefone: ''
     });
     const [errors, setErrors] = useState({});
 
@@ -62,7 +63,8 @@ export default function EditUserProfile() {
                     trigrama: targetUser.trigrama || '',
                     cpf: targetUser.cpf || '',
                     data_nascimento: targetUser.data_nascimento || '',
-                    crm_coren: targetUser.crm_coren || ''
+                    crm_coren: targetUser.crm_coren || '',
+                    telefone: targetUser.telefone || ''
                 });
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
@@ -295,6 +297,14 @@ export default function EditUserProfile() {
                                     />
                                 </div>
                             )}
+                            <div>
+                                <Label>Telefone</Label>
+                                <Input 
+                                    value={formData.telefone} 
+                                    onChange={(e) => handleFormChange('telefone', e.target.value)}
+                                    placeholder="(00) 00000-0000"
+                                />
+                            </div>
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button 
                                     variant="outline"
