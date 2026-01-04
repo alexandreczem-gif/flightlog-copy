@@ -22,7 +22,8 @@ export default function UserProfile() {
         trigrama: '',
         cpf: '',
         data_nascimento: '',
-        crm_coren: ''
+        crm_coren: '',
+        telefone: ''
     });
     const [errors, setErrors] = useState({});
 
@@ -38,7 +39,8 @@ export default function UserProfile() {
                     trigrama: currentUser.trigrama || '',
                     cpf: currentUser.cpf || '',
                     data_nascimento: currentUser.data_nascimento || '',
-                    crm_coren: currentUser.crm_coren || ''
+                    crm_coren: currentUser.crm_coren || '',
+                    telefone: currentUser.telefone || ''
                 });
                 
 
@@ -323,15 +325,23 @@ export default function UserProfile() {
                                     </div>
                                 </div>
                                 {(formData.posto_graduacao === 'Médico' || formData.posto_graduacao === 'Enfermeiro') && (
-                                    <div>
-                                        <Label>CRM/COREN *</Label>
-                                        <Input 
-                                            value={formData.crm_coren} 
-                                            onChange={(e) => handleFormChange('crm_coren', e.target.value)}
-                                            placeholder="Número do registro"
-                                        />
-                                    </div>
+                                   <div>
+                                       <Label>CRM/COREN *</Label>
+                                       <Input 
+                                           value={formData.crm_coren} 
+                                           onChange={(e) => handleFormChange('crm_coren', e.target.value)}
+                                           placeholder="Número do registro"
+                                       />
+                                   </div>
                                 )}
+                                <div>
+                                   <Label>Telefone</Label>
+                                   <Input 
+                                       value={formData.telefone} 
+                                       onChange={(e) => handleFormChange('telefone', e.target.value)}
+                                       placeholder="(00) 00000-0000"
+                                   />
+                                </div>
                                 <div className="flex justify-end pt-4">
                                     <Button 
                                         onClick={handleSaveChanges}
