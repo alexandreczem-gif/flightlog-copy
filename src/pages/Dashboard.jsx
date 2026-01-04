@@ -4,7 +4,7 @@ import { VictimRecord } from "@/entities/VictimRecord";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
 import { createPageUrl } from "@/utils";
-import { Plus, Gauge, Clock, ShieldQuestion, Plane, Users, Layers, Settings, FileSpreadsheet } from "lucide-react";
+import { Plus, Gauge, Clock, ShieldQuestion, Plane, Users, Layers, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { base44 } from '@/api/base44Client'; 
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ export default function Dashboard() {
   const [hasAccess, setHasAccess] = useState(false);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   const checkAccessAndLoad = async () => {
   setError(null);
@@ -225,35 +224,6 @@ export default function Dashboard() {
     };
   };
 
-  const handleExportToSheets = async (entityName, title) => {
-    setIsExporting(true);
-    try {
-      const response = await base44.functions.invoke('exportToSheets', {
-        entity_name: entityName,
-        title: title,
-        filters: {}
-      });
-
-      if (response.data.success) {
-        const confirmed = window.confirm(
-          `✅ ${response.data.message}\n\n` +
-          `Deseja abrir a planilha agora?`
-        );
-        
-        if (confirmed && response.data.spreadsheetUrl) {
-          window.open(response.data.spreadsheetUrl, '_blank');
-        }
-      } else {
-        alert('Erro ao exportar dados.');
-      }
-    } catch (error) {
-      console.error('Erro ao exportar:', error);
-      alert('Erro ao exportar dados para Google Sheets.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const arcanjo01Logs = logs.filter(log => log.aircraft === 'Arcanjo 01');
   const totalStats = calculateStats(arcanjo01Logs, false);
   const operationStats = operationStartDate ? calculateStats(operationLogs, true) : null;
@@ -291,35 +261,13 @@ export default function Dashboard() {
               Visão geral das operações da unidade aérea.
             </p>
           </div>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3">
             <Link to={createPageUrl("UserProfile")}>
               <Button variant="outline" className="border-slate-300">
                 <Settings className="w-4 h-4 mr-2" />
                 Editar Meu Perfil
               </Button>
             </Link>
-            {isAdmin && (
-              <>
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50"
-                  onClick={() => handleExportToSheets('FlightLog', 'Registros de Voo')}
-                  disabled={isExporting}
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  {isExporting ? 'Exportando...' : 'Exportar Voos'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-green-600 text-green-600 hover:bg-green-50"
-                  onClick={() => handleExportToSheets('VictimRecord', 'Vítimas Atendidas')}
-                  disabled={isExporting}
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  {isExporting ? 'Exportando...' : 'Exportar Vítimas'}
-                </Button>
-              </>
-            )}
             {user?.flight_log_role === 'OSM' && (
               <Link to={createPageUrl("NewPendingVictim")}>
                 <Button className="bg-green-700 hover:bg-green-800 text-white shadow-lg shadow-green-500/30">
