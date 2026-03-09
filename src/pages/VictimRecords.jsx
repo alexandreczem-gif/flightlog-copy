@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FlightLog } from "@/entities/FlightLog";
 import { VictimRecord } from "@/entities/VictimRecord";
 import { User } from '@/entities/User';
 import { Button } from '@/components/ui/button';
@@ -53,10 +52,7 @@ export default function VictimRecords() {
                 return;
             }
 
-            const [allFlights, detailedRecords] = await Promise.all([
-                FlightLog.list('-date'),
-                VictimRecord.list('-created_date')
-            ]);
+            const detailedRecords = await VictimRecord.list('-created_date');
 
             // Separar registros completos e pendentes
             let completed = detailedRecords.filter(r => !r.pending_registration);
@@ -72,47 +68,15 @@ export default function VictimRecords() {
 
             setCompletedRecords(completed);
 
-            // Criar um Set de identificadores únicos de vítimas que já têm registro (completo OU vinculado)
-            const detailedVictimIds = new Set(
-                detailedRecords.map(r => `${r.flight_log_id}_${r.victim_index}`)
-            );
-
-            // Iterar sobre todos os voos e suas vítimas
-            const pending = [];
-            allFlights.forEach(flight => {
-                if (flight.victims && Array.isArray(flight.victims) && flight.victims.length > 0) {
-                    flight.victims.forEach((victim, index) => {
-                        const victimId = `${flight.id}_${index}`;
-                        // Se esta vítima ainda não tem registro detalhado E não é uma vítima pré-detalhada vinculada
-                        if (!detailedVictimIds.has(victimId) && victim.name && !victim.pending_victim_id) {
-                            pending.push({
-                                flight_log_id: flight.id,
-                                victim_index: index,
-                                victim_name: victim.name,
-                                victim_age: victim.age,
-                                victim_sex: victim.sex,
-                                mission_id: flight.mission_id,
-                                date: flight.date,
-                                aircraft: flight.aircraft
-                            });
-                        }
-                    });
-                }
-            });
-
-            // Adicionar apenas vítimas pré-detalhadas que ainda estão pendentes de registro
-            pendingPreDetailed.forEach(preDetailed => {
-                pending.push({
-                    id: preDetailed.id,
-                    flight_log_id: 'pending',
-                    victim_index: 0,
-                    victim_name: preDetailed.nome_paciente,
-                    victim_age: preDetailed.idade,
-                    victim_sex: preDetailed.sexo_paciente,
-                    date: preDetailed.data,
-                    isPending: true
-                });
-            });
+            // Seção "Aguardando Registro do Voo": apenas registros criados pelo OSM aguardando voo
+            const pending = pendingPreDetailed.map(preDetailed => ({
+                id: preDetailed.id,
+                victim_name: preDetailed.nome_paciente,
+                victim_age: preDetailed.idade,
+                victim_sex: preDetailed.sexo_paciente,
+                date: preDetailed.data,
+                isPending: true
+            }));
 
             setPendingVictims(pending);
         } catch (error) {
@@ -522,7 +486,7 @@ export default function VictimRecords() {
                         <CardHeader className="bg-slate-50 border-b">
                             <CardTitle className="flex items-center gap-2">
                                 <UserPlus className="w-5 h-5 text-orange-600" />
-                                Vítimas Aguardando Detalhamento
+                                Aguardando Registro do Voo
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -531,58 +495,37 @@ export default function VictimRecords() {
                            ) : pendingVictims.length > 0 ? (
                                <div className="divide-y divide-slate-100">
                                    {pendingVictims.map((victim, idx) => (
-                                       <div key={`${victim.flight_log_id}_${victim.victim_index}_${idx}`} className="p-4 flex justify-between items-center hover:bg-slate-50">
+                                       <div key={`pending_${victim.id}_${idx}`} className="p-4 flex justify-between items-center hover:bg-slate-50">
                                            <div className="flex-1">
                                                <p className="font-semibold">{victim.victim_name}</p>
                                                <p className="text-sm text-slate-500">
-                                                   {victim.isPending ? (
-                                                       <>
-                                                           <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs mr-2">Pré-detalhada</span>
-                                                           {formatLocalDate(victim.date)}
-                                                       </>
-                                                   ) : (
-                                                       <>
-                                                           Missão {victim.mission_id} - {formatLocalDate(victim.date)}
-                                                       </>
-                                                   )}
+                                                   <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs mr-2">Pré-detalhada pelo OSM</span>
+                                                   {formatLocalDate(victim.date)}
                                                    {victim.victim_age && ` - ${victim.victim_age} anos`}
                                                    {victim.victim_sex && victim.victim_sex !== 'NA' && ` - ${victim.victim_sex === 'M' ? 'Masculino' : 'Feminino'}`}
                                                </p>
-                                               {!victim.isPending && victim.aircraft && (
-                                                   <p className="text-xs text-slate-400">
-                                                       Aeronave: {victim.aircraft}
-                                                   </p>
-                                               )}
                                            </div>
-                                           {victim.isPending ? (
-                                               <div className="flex gap-2">
-                                                   <Button 
-                                                       size="sm"
-                                                       variant="outline"
-                                                       onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
-                                                   >
-                                                       Editar
-                                                   </Button>
-                                                   <Button 
-                                                       size="sm"
-                                                       variant="outline"
-                                                       className="text-red-600 hover:bg-red-50"
-                                                       onClick={async () => {
-                                                           if (window.confirm(`Tem certeza que deseja excluir o pré-detalhamento de ${victim.victim_name}?`)) {
-                                                               await handleDelete(victim.id);
-                                                           }
-                                                       }}
-                                                   >
-                                                       Excluir
-                                                   </Button>
-                                               </div>
-                                           ) : (
+                                           <div className="flex gap-2">
                                                <Button 
-                                                 onClick={() => navigate(createPageUrl("NewVictimRecord") + `?flight_log_id=${victim.flight_log_id}&victim_index=${victim.victim_index}`)}
+                                                   size="sm"
+                                                   variant="outline"
+                                                   onClick={() => navigate(createPageUrl("EditVictimRecord") + `?id=${victim.id}`)}
                                                >
-                                                 Detalhar Atendimento
+                                                   Editar
                                                </Button>
-                                           )}
+                                               <Button 
+                                                   size="sm"
+                                                   variant="outline"
+                                                   className="text-red-600 hover:bg-red-50"
+                                                   onClick={async () => {
+                                                       if (window.confirm(`Tem certeza que deseja excluir o pré-detalhamento de ${victim.victim_name}?`)) {
+                                                           await handleDelete(victim.id);
+                                                       }
+                                                   }}
+                                               >
+                                                   Excluir
+                                               </Button>
+                                           </div>
                                        </div>
                                    ))}
                                </div>
