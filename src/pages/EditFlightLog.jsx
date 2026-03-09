@@ -89,6 +89,31 @@ export default function EditFlightLog() {
     fetchLogAndCheckAccess();
   }, [navigate, location]);
 
+  const buildVictimFlightData = (logData) => ({
+    data: logData.date,
+    base: logData.base,
+    ano: new Date(logData.date).getFullYear(),
+    mes: new Date(logData.date).toLocaleString('pt-BR', { month: 'long' }),
+    aeronave: logData.aircraft,
+    comandante: logData.pilot_in_command,
+    copiloto: logData.copilot || '',
+    oat_1: logData.oat_1 || '',
+    osm_1: logData.osm_1 || '',
+    osm_2: logData.osm_2 || '',
+    diario_bordo_pagina: logData.diario_bordo_pagina || '',
+    departure_time_1: logData.departure_time_1 || '',
+    arrival_time_1: logData.arrival_time_1 || '',
+    departure_time_2: logData.departure_time_2 || '',
+    arrival_time_2: logData.arrival_time_2 || '',
+    departure_time_3: logData.departure_time_3 || '',
+    arrival_time_3: logData.arrival_time_3 || '',
+    departure_time_4: logData.departure_time_4 || '',
+    arrival_time_4: logData.arrival_time_4 || '',
+    departure_time_5: logData.departure_time_5 || '',
+    arrival_time_5: logData.arrival_time_5 || '',
+    duracao_total_min: logData.flight_duration,
+  });
+
   const handleSave = async (logData) => {
     if (!logId) {
       alert("Erro: ID do registro não encontrado.");
@@ -99,89 +124,67 @@ export default function EditFlightLog() {
     try {
       const { id, created_date, updated_date, created_by, ...dataToUpdate } = logData;
       
-      // Identificar vítimas originais e atuais
-      const originalVictims = logToEdit.victims || [];
-      const currentVictims = logData.victims || [];
-      
-      // Buscar VictimRecords vinculados a este FlightLog
-      const existingVictimRecords = await base44.entities.VictimRecord.filter({ flight_log_id: logId });
-      
-      // Identificar vítimas removidas (comparando índices)
-      const removedVictimIndices = [];
-      for (let i = 0; i < originalVictims.length; i++) {
-        const originalVictim = originalVictims[i];
-        const stillExists = currentVictims.some(cv => 
-          cv.name === originalVictim.name && 
-          cv.sex === originalVictim.sex && 
-          cv.age === originalVictim.age
-        );
-        
-        if (!stillExists) {
-          removedVictimIndices.push(i);
-        }
-      }
-      
-      // Excluir VictimRecords das vítimas removidas (apenas aguardando detalhamento)
-      for (const removedIndex of removedVictimIndices) {
-        const victimRecord = existingVictimRecords.find(vr => 
-          vr.victim_index === removedIndex && vr.pending_registration === false
-        );
-        
-        if (victimRecord) {
-          await base44.entities.VictimRecord.delete(victimRecord.id);
-          await logAction('delete', 'VictimRecord', victimRecord.id, { reason: 'Removed from flight log' });
-        }
-      }
-      
       // Atualizar FlightLog
       await base44.entities.FlightLog.update(logId, dataToUpdate);
       await logAction('update', 'FlightLog', logId, dataToUpdate);
-      
-      // Processar vítimas pré-detalhadas selecionadas
+
+      const flightData = buildVictimFlightData(logData);
+      const currentVictims = logData.victims || [];
+
+      // Buscar VictimRecords já vinculados a este FlightLog
+      const existingVictimRecords = await base44.entities.VictimRecord.filter({ flight_log_id: logId });
+
       for (let i = 0; i < currentVictims.length; i++) {
         const victim = currentVictims[i];
-        
+        if (!victim.name) continue;
+
+        const victimData = {
+          ...flightData,
+          flight_log_id: logId,
+          victim_index: i,
+          mission_id: logData.mission_id,
+          pending_registration: false,
+          nome_paciente: victim.name,
+          sexo_paciente: victim.sex || 'NA',
+          idade: victim.age || '',
+          grau_afogamento: victim.drowning_grade || 'NA',
+          cidade_origem: victim.origin_city || '',
+          hospital_origem: victim.origin_hospital || '',
+          local_pouso_origem: victim.origin_landing_site || '',
+          cidade_destino: victim.destination_city || '',
+          hospital_destino: victim.destination_hospital || '',
+          local_pouso_destino: victim.destination_landing_site || ''
+        };
+
         if (victim.pending_victim_id) {
-          // Buscar o registro pré-detalhado
-          const pendingRecords = await base44.entities.VictimRecord.filter({ id: victim.pending_victim_id });
-          
-          if (pendingRecords.length > 0) {
-            const pendingRecord = pendingRecords[0];
-            
-            // Atualizar com dados da missão e marcar como completo
-            await base44.entities.VictimRecord.update(pendingRecord.id, {
-              flight_log_id: logId,
-              victim_index: i,
-              mission_id: logData.mission_id,
-              pending_registration: false,
-              ano: new Date(logData.date).getFullYear(),
-              mes: new Date(logData.date).toLocaleString('pt-BR', { month: 'long' }),
-              base: logData.base,
-              data: logData.date,
-              aeronave: logData.aircraft,
-              comandante: logData.pilot_in_command,
-              copiloto: logData.copilot || '',
-              oat_1: logData.oat_1 || '',
-              osm_1: logData.osm_1 || '',
-              osm_2: logData.osm_2 || '',
-              diario_bordo_pagina: logData.diario_bordo_pagina || '',
-              nome_paciente: victim.name,
-              sexo_paciente: victim.sex,
-              idade: victim.age,
-              grau_afogamento: victim.drowning_grade,
-              cidade_origem: victim.origin_city,
-              hospital_origem: victim.origin_hospital,
-              local_pouso_origem: victim.origin_landing_site,
-              cidade_destino: victim.destination_city,
-              hospital_destino: victim.destination_hospital,
-              local_pouso_destino: victim.destination_landing_site
-            });
-            
-            await logAction('update', 'VictimRecord', pendingRecord.id, { 
-              linked_to_flight: logId,
-              status: 'completed'
-            });
+          // Vítima OSM pré-detalhada: incorporar dados do voo
+          await base44.entities.VictimRecord.update(victim.pending_victim_id, victimData);
+          await logAction('update', 'VictimRecord', victim.pending_victim_id, { linked_to_flight: logId });
+        } else {
+          // Vítima do Piloto/OAT: verificar se já existe registro vinculado pelo índice
+          const existingRecord = existingVictimRecords.find(vr => vr.victim_index === i);
+          if (existingRecord) {
+            // Atualizar registro existente com novos dados do voo
+            await base44.entities.VictimRecord.update(existingRecord.id, victimData);
+            await logAction('update', 'VictimRecord', existingRecord.id, { updated_from_flight_edit: logId });
+          } else {
+            // Nova vítima adicionada nesta edição: criar registro completo
+            const created = await base44.entities.VictimRecord.create(victimData);
+            await logAction('create', 'VictimRecord', created.id, victimData);
           }
+        }
+      }
+
+      // Remover VictimRecords de vítimas que foram excluídas da missão
+      for (const existingRecord of existingVictimRecords) {
+        const stillExists = currentVictims.some((cv, idx) => {
+          if (existingRecord.victim_index === idx && cv.name) return true;
+          if (cv.pending_victim_id && cv.pending_victim_id === existingRecord.id) return true;
+          return false;
+        });
+        if (!stillExists) {
+          await base44.entities.VictimRecord.delete(existingRecord.id);
+          await logAction('delete', 'VictimRecord', existingRecord.id, { reason: 'Removed from flight log edit' });
         }
       }
       

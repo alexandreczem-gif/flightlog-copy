@@ -151,6 +151,49 @@ export default function NewFlightLog() {
     }
   };
 
+  const buildVictimRecordData = (victim, flightLogId, victimIndex, dataToSave, missionId) => {
+    const year = new Date(dataToSave.date).getFullYear();
+    const month = new Date(dataToSave.date).toLocaleString('pt-BR', { month: 'long' });
+    return {
+      flight_log_id: flightLogId,
+      victim_index: victimIndex,
+      mission_id: missionId,
+      pending_registration: false,
+      data: dataToSave.date,
+      base: dataToSave.base,
+      ano: year,
+      mes: month,
+      aeronave: dataToSave.aircraft,
+      comandante: dataToSave.pilot_in_command,
+      copiloto: dataToSave.copilot || '',
+      oat_1: dataToSave.oat_1 || '',
+      osm_1: dataToSave.osm_1 || '',
+      osm_2: dataToSave.osm_2 || '',
+      diario_bordo_pagina: dataToSave.diario_bordo_pagina || '',
+      departure_time_1: dataToSave.departure_time_1 || '',
+      arrival_time_1: dataToSave.arrival_time_1 || '',
+      departure_time_2: dataToSave.departure_time_2 || '',
+      arrival_time_2: dataToSave.arrival_time_2 || '',
+      departure_time_3: dataToSave.departure_time_3 || '',
+      arrival_time_3: dataToSave.arrival_time_3 || '',
+      departure_time_4: dataToSave.departure_time_4 || '',
+      arrival_time_4: dataToSave.arrival_time_4 || '',
+      departure_time_5: dataToSave.departure_time_5 || '',
+      arrival_time_5: dataToSave.arrival_time_5 || '',
+      duracao_total_min: dataToSave.flight_duration,
+      nome_paciente: victim.name || '',
+      sexo_paciente: victim.sex || 'NA',
+      idade: victim.age || '',
+      grau_afogamento: victim.drowning_grade || 'NA',
+      cidade_origem: victim.origin_city || '',
+      hospital_origem: victim.origin_hospital || '',
+      local_pouso_origem: victim.origin_landing_site || '',
+      cidade_destino: victim.destination_city || '',
+      hospital_destino: victim.destination_hospital || '',
+      local_pouso_destino: victim.destination_landing_site || ''
+    };
+  };
+
   const handleSave = async (logData) => {
     setIsSaving(true);
     try {
@@ -161,56 +204,25 @@ export default function NewFlightLog() {
         is_regular_scale: missionInOperation
       };
 
-      console.log('Enviando dados para API:', dataToSave);
       const createdLog = await base44.entities.FlightLog.create(dataToSave);
       
       if (createdLog && createdLog.id) {
         await logAction('create', 'FlightLog', createdLog.id, dataToSave);
         
-        // Processar vítimas pré-detalhadas
         if (logData.victims && logData.victims.length > 0) {
           for (let i = 0; i < logData.victims.length; i++) {
             const victim = logData.victims[i];
-            
-            // Se é uma vítima pré-detalhada, atualizar o registro
+            const recordData = buildVictimRecordData(victim, createdLog.id, i, dataToSave, nextMissionId);
+
             if (victim.pending_victim_id) {
-              const year = new Date(dataToSave.date).getFullYear();
-              const month = new Date(dataToSave.date).toLocaleString('pt-BR', { month: 'long' });
-              
+              // Vítima pré-detalhada pelo OSM: incorporar dados do voo e marcar como completo
               await base44.entities.VictimRecord.update(victim.pending_victim_id, {
-                flight_log_id: createdLog.id,
-                victim_index: i,
-                mission_id: nextMissionId,
-                pending_registration: false,
-                data: dataToSave.date,
-                base: dataToSave.base,
-                ano: year,
-                mes: month,
-                aeronave: dataToSave.aircraft,
-                comandante: dataToSave.pilot_in_command,
-                copiloto: dataToSave.copilot || '',
-                oat_1: dataToSave.oat_1 || '',
-                osm_1: dataToSave.osm_1 || '',
-                osm_2: dataToSave.osm_2 || '',
-                diario_bordo_pagina: dataToSave.diario_bordo_pagina || '',
-                departure_time_1: dataToSave.departure_time_1 || '',
-                arrival_time_1: dataToSave.arrival_time_1 || '',
-                departure_time_2: dataToSave.departure_time_2 || '',
-                arrival_time_2: dataToSave.arrival_time_2 || '',
-                departure_time_3: dataToSave.departure_time_3 || '',
-                arrival_time_3: dataToSave.arrival_time_3 || '',
-                departure_time_4: dataToSave.departure_time_4 || '',
-                arrival_time_4: dataToSave.arrival_time_4 || '',
-                departure_time_5: dataToSave.departure_time_5 || '',
-                arrival_time_5: dataToSave.arrival_time_5 || '',
-                duracao_total_min: dataToSave.flight_duration,
-                cidade_origem: victim.origin_city || '',
-                hospital_origem: victim.origin_hospital || '',
-                local_pouso_origem: victim.origin_landing_site || '',
-                cidade_destino: victim.destination_city || '',
-                hospital_destino: victim.destination_hospital || '',
-                local_pouso_destino: victim.destination_landing_site || ''
+                ...recordData,
+                // Preservar dados clínicos já preenchidos pelo OSM (não sobrescrever com vazios)
               });
+            } else if (victim.name) {
+              // Vítima adicionada do zero pelo Piloto/OAT: criar registro completo direto
+              await base44.entities.VictimRecord.create(recordData);
             }
           }
         }
@@ -220,8 +232,7 @@ export default function NewFlightLog() {
       alert("Registro salvo com sucesso!");
       navigate(createPageUrl("FlightLogs"));
     } catch (error) {
-      console.error("Erro completo ao salvar registro de voo:", error);
-      console.error("Detalhes do erro:", error.message, error.response);
+      console.error("Erro ao salvar registro de voo:", error);
       alert(`Erro ao salvar registro: ${error.message || 'Verifique os dados e tente novamente.'}`);
     } finally {
       setIsSaving(false);
