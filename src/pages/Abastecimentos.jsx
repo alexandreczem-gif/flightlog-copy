@@ -101,10 +101,14 @@ export default function AbastecimentosPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Carregar UAAs ativas no mapa da força hoje
+      // Carregar UAAs cadastradas e ativas
+      const activeUAAsFromBase = await base44.entities.UAA.filter({ ativa: true });
+      
+      // Carregar UAAs ativas no mapa da força hoje (para cálculo de combustível)
       const todayStr = format(new Date(), 'yyyy-MM-dd');
-      const activeUAAs = await base44.entities.DailyService.filter({ date: todayStr, type: 'uaa' });
-      setUaaList(activeUAAs);
+      const activeUAAsServices = await base44.entities.DailyService.filter({ date: todayStr, type: 'uaa' });
+      
+      setUaaList(activeUAAsFromBase);
 
       // Carregar abastecimentos últimos 30 dias
       const thirtyDaysAgo = new Date();
@@ -114,7 +118,7 @@ export default function AbastecimentosPage() {
       const data = await base44.entities.Abastecimento.filter({ date: { "$gte": dateStr } }, '-date');
       setAbastecimentos(data);
       
-      await calculateUAAFuels(activeUAAs);
+      await calculateUAAFuels(activeUAAsServices);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -313,38 +317,35 @@ export default function AbastecimentosPage() {
         </motion.div>
 
         {/* Cards de Combustível UAA */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {uaaList.map(uaa => (
-            <motion.div key={uaa.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-blue-600">
-                        <Truck className="w-5 h-5 text-white" />
+        {Object.keys(uaaFuels).length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {Object.entries(uaaFuels).map(([plateName, fuel]) => (
+              <motion.div key={plateName} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-blue-600">
+                          <Truck className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-blue-900">{plateName}</p>
+                          <p className="text-xs text-slate-500">UAA Operando Hoje</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-blue-900">{uaa.name}</p>
-                        <p className="text-xs text-slate-500">Eq. {uaa.team}</p>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-blue-900">
+                          {fuel.toFixed(0)}
+                        </p>
+                        <p className="text-xs text-slate-600">Litros</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-900">
-                        {uaaFuels[uaa.name] !== undefined ? uaaFuels[uaa.name].toFixed(0) : '-'}
-                      </p>
-                      <p className="text-xs text-slate-600">Litros</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-          {uaaList.length === 0 && (
-            <div className="col-span-full p-4 text-center text-slate-500 bg-white rounded border border-dashed">
-              Nenhuma UAA lançada no Mapa da Força hoje.
-            </div>
-          )}
-        </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
         
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="shadow-xl bg-white border-slate-200 mb-8">
@@ -393,7 +394,11 @@ export default function AbastecimentosPage() {
                      <Select value={formData.uaa_plate} onValueChange={(v) => handleChange('uaa_plate', v)} required>
                        <SelectTrigger><SelectValue placeholder="Selecione a UAA..." /></SelectTrigger>
                        <SelectContent>
-                         {uaaList.map(u => <SelectItem key={u.id} value={u.name}>{u.name} (Eq. {u.team})</SelectItem>)}
+                         {uaaList.map(u => (
+                           <SelectItem key={u.id} value={u.plate}>
+                             {u.plate} {u.model ? `- ${u.model}` : ''}
+                           </SelectItem>
+                         ))}
                        </SelectContent>
                      </Select>
                    ) : (
