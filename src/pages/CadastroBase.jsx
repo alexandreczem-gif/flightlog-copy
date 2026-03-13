@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Plus, Upload, Download, Trash } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import AerodromoTable from "../components/aerodromo/AerodromoTable";
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, Trash2 } from "lucide-react";
 import AeronaveForm from "../components/aeronave/AeronaveForm";
 import AeronaveTable from "../components/aeronave/AeronaveTable";
+import UAAForm from "../components/uaa/UAAForm";
+import UAATable from "../components/uaa/UAATable";
 
 export default function CadastroBase() {
   const navigate = useNavigate();
@@ -50,6 +52,11 @@ export default function CadastroBase() {
   const [showAeronaveForm, setShowAeronaveForm] = useState(false);
   const [editingAeronave, setEditingAeronave] = useState(null);
 
+  // UAAs
+  const [uaas, setUAAs] = useState([]);
+  const [showUAAForm, setShowUAAForm] = useState(false);
+  const [editingUAA, setEditingUAA] = useState(null);
+
   useEffect(() => {
     checkAccessAndLoad();
   }, [navigate]);
@@ -72,18 +79,20 @@ export default function CadastroBase() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [aerodromosData, hospitaisData, citiesData, tripulantesData, aeronavesData] = await Promise.all([
+      const [aerodromosData, hospitaisData, citiesData, tripulantesData, aeronavesData, uaasData] = await Promise.all([
         base44.entities.Aerodromo.list(),
         base44.entities.Hospital.list(),
         base44.entities.City.list(),
         base44.entities.Tripulante.list(),
-        base44.entities.Aeronave.list()
+        base44.entities.Aeronave.list(),
+        base44.entities.UAA.list()
       ]);
       setAerodromos(aerodromosData);
       setHospitais(hospitaisData);
       setCities(citiesData);
       setTripulantes(tripulantesData);
       setAeronaves(aeronavesData);
+      setUAAs(uaasData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados");
@@ -251,6 +260,117 @@ export default function CadastroBase() {
     }
   };
 
+  // UAAs handlers
+  const handleUAASubmit = async (data) => {
+    try {
+      if (editingUAA) {
+        await base44.entities.UAA.update(editingUAA.id, data);
+        toast.success("UAA atualizada com sucesso");
+      } else {
+        await base44.entities.UAA.create(data);
+        toast.success("UAA criada com sucesso");
+      }
+      setShowUAAForm(false);
+      setEditingUAA(null);
+      loadData();
+    } catch (error) {
+      console.error("Erro ao salvar UAA:", error);
+      toast.error("Erro ao salvar UAA");
+    }
+  };
+
+  const handleUAADelete = async (id) => {
+    if (window.confirm("Tem certeza que deseja excluir esta UAA?")) {
+      try {
+        await base44.entities.UAA.delete(id);
+        toast.success("UAA excluída com sucesso");
+        loadData();
+      } catch (error) {
+        console.error("Erro ao excluir UAA:", error);
+        toast.error("Erro ao excluir UAA");
+      }
+    }
+  };
+
+  // Export functions
+  const exportToCSV = (data, filename, headers) => {
+    if (!data || data.length === 0) {
+      toast.error("Não há dados para exportar");
+      return;
+    }
+    
+    const keys = headers || Object.keys(data[0]);
+    const csvContent = [
+      keys.join(','),
+      ...data.map(item => keys.map(key => {
+        const value = item[key];
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        return stringValue.includes(',') ? `"${stringValue}"` : stringValue;
+      }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast.success("CSV exportado com sucesso");
+  };
+
+  // Import from CSV
+  const handleImportCSV = async (entityName, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        const records = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            const record = {};
+            headers.forEach((header, index) => {
+              record[header] = values[index];
+            });
+            records.push(record);
+          }
+        }
+
+        await base44.entities[entityName].bulkCreate(records);
+        toast.success(`${records.length} registros importados com sucesso`);
+        loadData();
+      } catch (error) {
+        console.error("Erro ao importar CSV:", error);
+        toast.error("Erro ao importar CSV");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
+  // Delete all
+  const handleDeleteAll = async (entityName, entityLabel) => {
+    if (window.confirm(`Tem certeza que deseja excluir TODOS os registros de ${entityLabel}? Esta ação não pode ser desfeita!`)) {
+      try {
+        const allRecords = await base44.entities[entityName].list();
+        for (const record of allRecords) {
+          await base44.entities[entityName].delete(record.id);
+        }
+        toast.success(`Todos os registros de ${entityLabel} foram excluídos`);
+        loadData();
+      } catch (error) {
+        console.error(`Erro ao excluir registros de ${entityLabel}:`, error);
+        toast.error(`Erro ao excluir registros de ${entityLabel}`);
+      }
+    }
+  };
+
   if (!hasAccess) {
     return (
       <div className="min-h-screen p-8 flex items-center justify-center">
@@ -274,11 +394,43 @@ export default function CadastroBase() {
             <TabsTrigger value="cidades">Cidades</TabsTrigger>
             <TabsTrigger value="tripulantes">Tripulantes</TabsTrigger>
             <TabsTrigger value="aeronaves">Aeronaves</TabsTrigger>
+            <TabsTrigger value="uaas">UAAs</TabsTrigger>
           </TabsList>
 
           {/* Aeródromos */}
           <TabsContent value="aerodromos" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => exportToCSV(aerodromos, 'aerodromos', ['icao_code', 'latitude_raw', 'longitude_raw', 'latitude_decimal', 'longitude_decimal'])}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => handleImportCSV('Aerodromo', e)}
+                  />
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Importar CSV
+                    </span>
+                  </Button>
+                </label>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteAll('Aerodromo', 'Aeródromos')}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Excluir Tudo
+                </Button>
+              </div>
               <Button
                 onClick={() => {
                   setEditingAerodromo(null);
@@ -313,7 +465,38 @@ export default function CadastroBase() {
 
           {/* Hospitais */}
           <TabsContent value="hospitais" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => exportToCSV(hospitais, 'hospitais')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => handleImportCSV('Hospital', e)}
+                  />
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Importar CSV
+                    </span>
+                  </Button>
+                </label>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteAll('Hospital', 'Hospitais')}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Excluir Tudo
+                </Button>
+              </div>
               <Button
                 onClick={() => {
                   setEditingHospital(null);
@@ -348,7 +531,38 @@ export default function CadastroBase() {
 
           {/* Cidades */}
           <TabsContent value="cidades" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => exportToCSV(cities, 'cidades', ['name', 'latitude_raw', 'longitude_raw'])}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => handleImportCSV('City', e)}
+                  />
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Importar CSV
+                    </span>
+                  </Button>
+                </label>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteAll('City', 'Cidades')}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Excluir Tudo
+                </Button>
+              </div>
               <Button
                 onClick={() => {
                   setEditingCity(null);
@@ -383,7 +597,38 @@ export default function CadastroBase() {
 
           {/* Tripulantes */}
           <TabsContent value="tripulantes" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => exportToCSV(tripulantes, 'tripulantes', ['nome_de_guerra', 'trigrama', 'posto_graduacao', 'funcao', 'user_email'])}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => handleImportCSV('Tripulante', e)}
+                  />
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Importar CSV
+                    </span>
+                  </Button>
+                </label>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteAll('Tripulante', 'Tripulantes')}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Excluir Tudo
+                </Button>
+              </div>
               <Button
                 onClick={() => {
                   setEditingTripulante(null);
@@ -446,6 +691,41 @@ export default function CadastroBase() {
                   setShowAeronaveForm(true);
                 }}
                 onDelete={handleAeronaveDelete}
+                isLoading={isLoading}
+              />
+            )}
+          </TabsContent>
+
+          {/* UAAs */}
+          <TabsContent value="uaas" className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  setEditingUAA(null);
+                  setShowUAAForm(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nova UAA
+              </Button>
+            </div>
+            {showUAAForm ? (
+              <UAAForm
+                uaa={editingUAA}
+                onSubmit={handleUAASubmit}
+                onCancel={() => {
+                  setShowUAAForm(false);
+                  setEditingUAA(null);
+                }}
+              />
+            ) : (
+              <UAATable
+                uaas={uaas}
+                onEdit={(uaa) => {
+                  setEditingUAA(uaa);
+                  setShowUAAForm(true);
+                }}
+                onDelete={handleUAADelete}
                 isLoading={isLoading}
               />
             )}
