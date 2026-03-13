@@ -49,7 +49,7 @@ export default function HospitalTable({ hospitals, isLoading, onEdit, onDelete }
     );
   }
 
-  if (hospitals.length === 0) {
+  if (!hospitals || hospitals.length === 0) {
     return (
       <div className="text-center py-16 text-slate-500">
         Nenhum hospital cadastrado.
