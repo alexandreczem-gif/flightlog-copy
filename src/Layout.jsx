@@ -34,12 +34,6 @@ const navigationItems = [
   },
 
   {
-    title: "Tripulantes",
-    url: createPageUrl("Tripulantes"),
-    icon: Users,
-    adminOnly: false,
-  },
-  {
     title: "Mapa da Força",
     url: createPageUrl("MapaDaForca"),
     icon: ClipboardCheck,
@@ -76,21 +70,9 @@ const navigationItems = [
     adminOnly: false,
   },
   {
-    title: "Aeródromos",
-    url: createPageUrl("Aerodromos"),
-    icon: Plane,
-    adminOnly: true,
-  },
-  {
-    title: "Hospitais",
-    url: createPageUrl("Hospitais"),
-    icon: Users,
-    adminOnly: true,
-  },
-  {
-    title: "Cidades",
-    url: createPageUrl("Cidades"),
-    icon: Users,
+    title: "Cadastro Base",
+    url: "/CadastroBase",
+    icon: Settings,
     adminOnly: true,
   },
   {
@@ -176,15 +158,9 @@ export default function Layout({ children, currentPageName }) {
       return false;
     }
 
-    // Tripulantes: apenas admin
-    if (item.title === "Tripulantes") {
-      return false;
-    }
-
-    // Piloto e OAT: acesso a quase tudo exceto aeródromos, hospitais e gestão de usuários
+    // Piloto e OAT: acesso a quase tudo exceto gestão de usuários
     if (userRole === 'Piloto' || userRole === 'OAT') {
-      const blocked = ["Aeródromos", "Hospitais", "Gerenciar Usuários"];
-      return !blocked.includes(item.title);
+      return true;
     }
 
     // TASA: apenas dashboard, perfil, abastecimentos, serviço diário e histórico
