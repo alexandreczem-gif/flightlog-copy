@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutGrid, Plane, ClipboardList, Users, ClipboardCheck, BookOpenCheck, Fuel, Stethoscope } from "lucide-react";
+import { LayoutGrid, Plane, ClipboardList, Users, ClipboardCheck, BookOpenCheck, Fuel, Stethoscope, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
