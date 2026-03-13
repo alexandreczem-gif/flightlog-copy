@@ -27,6 +27,7 @@ export default function MapaDaForca() {
   const [tripulantes, setTripulantes] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [uaaFuels, setUaaFuels] = useState({});
+  const [uaaList, setUaaList] = useState([]);
   
   // Form States
   const [aircraftForm, setAircraftForm] = useState({
@@ -75,13 +76,15 @@ export default function MapaDaForca() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [services, tripulantesList, abastecimentos] = await Promise.all([
+      const [services, tripulantesList, abastecimentos, uaas] = await Promise.all([
         base44.entities.DailyService.filter({ status: 'active' }),
         base44.entities.Tripulante.list(),
-        base44.entities.Abastecimento.filter({ date: todayStr })
+        base44.entities.Abastecimento.filter({ date: todayStr }),
+        base44.entities.UAA.filter({ ativa: true })
       ]);
       setTodayServices(services);
       setTripulantes(tripulantesList);
+      setUaaList(uaas);
       
       // Calcular combustível remanescente para cada UAA ativa
       const fuels = {};
@@ -506,17 +509,24 @@ export default function MapaDaForca() {
                   <TabsContent value="uaa" className="space-y-4">
                      <div>
                       <Label>Placa da UAA</Label>
-                      <Input 
+                      <Select 
                         value={uaaForm.name} 
-                        onChange={e => {
-                          setUaaForm({...uaaForm, name: e.target.value});
+                        onValueChange={v => {
+                          setUaaForm({...uaaForm, name: v});
                           setShowInitialFuel(false);
                           setSuggestedFuel(null);
-                        }} 
-                        placeholder="ABC-1234" 
-                        className="uppercase"
+                        }}
                         disabled={showInitialFuel}
-                      />
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione a UAA..." /></SelectTrigger>
+                        <SelectContent>
+                          {uaaList.map(uaa => (
+                            <SelectItem key={uaa.id} value={uaa.plate}>
+                              {uaa.plate} {uaa.model ? `- ${uaa.model}` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label>Base</Label>
