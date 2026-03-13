@@ -104,33 +104,45 @@ export default function NewFlightLog() {
 
   // Filter aircraft based on mission type and selected date
   useEffect(() => {
-    const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"];
-    
-    // Se "Missão em escala regular" está desmarcada, mostrar todas as aeronaves
-    if (!missionInOperation) {
-      setFilteredAircraft(AIRCRAFT_OPTIONS.map(a => ({ label: a, value: a })));
-      return;
-    }
+    const fetchAircraft = async () => {
+      // Se "Missão em escala regular" está desmarcada, buscar aeronaves ativas do cadastro base
+      if (!missionInOperation) {
+        try {
+          const activeAeronaves = await base44.entities.Aeronave.filter({ ativa: true });
+          const aircraftList = activeAeronaves.map(a => ({
+            label: a.designativo,
+            value: a.designativo
+          }));
+          setFilteredAircraft(aircraftList);
+        } catch (error) {
+          console.error("Erro ao carregar aeronaves ativas:", error);
+          setFilteredAircraft([]);
+        }
+        return;
+      }
 
-    // Se "Missão em escala regular" está marcada, buscar no mapa da força da data selecionada
-    if (dailyServiceData && Array.isArray(dailyServiceData)) {
-      const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
-      
-      if (aircraftServices.length > 0) {
-        // Encontrou aeronaves no mapa da força para esta data
-        const aircraftList = aircraftServices.map(svc => ({
-          label: `${svc.name} - Equipe ${svc.team}`,
-          value: svc.name, 
-          service: svc
-        }));
-        setFilteredAircraft(aircraftList);
+      // Se "Missão em escala regular" está marcada, buscar no mapa da força da data selecionada
+      if (dailyServiceData && Array.isArray(dailyServiceData)) {
+        const aircraftServices = dailyServiceData.filter(s => s.type === 'aircraft');
+        
+        if (aircraftServices.length > 0) {
+          // Encontrou aeronaves no mapa da força para esta data
+          const aircraftList = aircraftServices.map(svc => ({
+            label: `${svc.name} - Equipe ${svc.team}`,
+            value: svc.name, 
+            service: svc
+          }));
+          setFilteredAircraft(aircraftList);
+        } else {
+          // Não encontrou aeronaves para esta data
+          setFilteredAircraft([]);
+        }
       } else {
-        // Não encontrou aeronaves para esta data
         setFilteredAircraft([]);
       }
-    } else {
-      setFilteredAircraft([]);
-    }
+    };
+    
+    fetchAircraft();
   }, [dailyServiceData, missionInOperation]);
 
   const handleAircraftChange = (aircraft) => {
