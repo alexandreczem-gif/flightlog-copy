@@ -4,11 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 08", "Falcão 03", "Falcão 04"];
-const MISSION_TYPES = ["Remoção aeromédica", "Resgate aeromédico", "Busca Terrestre", "Busca Aquática", "Salvamento Aquático", "Salvamento Terrestre", "Transporte de Órgãos", "Combate a Incêndio", "Plataforma de observação BM", "Transporte de tropa BM", "Operação de Defesa Civil", "Ronda Preventiva na Faixa Litorânea", "Ocorrência Cancelada", "Transporte de Vacinas/Medicamentos", "Transporte de materiais", "Transporte de autoridades", "Apoio a PM", "Apoio a Outros Órgãos", "Voo de Manutenção", "Voo de Treinamento", "Voo de Translado", "Voo de demonstração", "Cumprimento de Ordem de Serviço"];
+const MISSION_TYPES_BM = ["Remoção aeromédica", "Resgate aeromédico", "Busca Terrestre", "Busca Aquática", "Salvamento Aquático", "Salvamento Terrestre", "Transporte de Órgãos", "Combate a Incêndio", "Plataforma de observação BM", "Transporte de tropa BM", "Operação de Defesa Civil", "Ronda Preventiva na Faixa Litorânea", "Ocorrência Cancelada", "Transporte de Vacinas/Medicamentos", "Transporte de materiais", "Transporte de autoridades", "Apoio a PM", "Apoio a Outros Órgãos", "Voo de Manutenção", "Voo de Treinamento", "Voo de Translado", "Voo de demonstração", "Cumprimento de Ordem de Serviço"];
+const MISSION_TYPES_PM = ["Operações Programadas/Eventos", "Busca de Fugitivo(s)/Suspeito(s)", "Roubo", "Roubo a Banco", "Confronto Armado", "Veículo Recuperado", "Sequestro de Pessoas", "Plataforma de Observação Policial", "Radio Patrulhamento Urbano", "Radio Patrulhamento Aéreo em Fronteira", "Radio Patrulhamento Aéreo Rodoviário", "Fuga/Rebelião em Estabelecimento Prisional", "Escolta", "Cumprimento de Mandando", "Reintegração de Posse", "Fiscalização Ambiental", "Transporte de Autoridade(s)/Dignitário(s)", "Transporte de Material (Armas, Munições)", "Transporte de Material (Outros)", "Transporte de Tropa Policial", "Ocorrência Aérea Policial Cancelada", "Ocorrências Diversas"];
 const BASE_OPTIONS = ["Operação Verão", "Curitiba-BPMOA", "Curitiba-PRF", "Londrina", "Maringá", "Ponta Grossa"];
 const TRANSPORT_TYPE_OPTIONS = ["Resgate", "Remoção", "Órgão", "Treinamento Operacional"];
 const TRANSPORT_STATUS_OPTIONS = ["Completo", "Cancelado", "Sem atendimento"];
@@ -19,17 +21,20 @@ export default function AdvancedFilters({ onFilterChange }) {
     const [filters, setFilters] = useState({
         dateFrom: '',
         dateTo: '',
+        timeFrom: '',
+        timeTo: '',
         base: '',
         samu_occurrence: '',
         sade_occurrence: '',
         mission_id: '',
         aircraft: '',
         municipality: '',
-        mission_type: '',
-        commander: '',
-        heli_operations: '',
-        crew_member: '',
+        mission_types: [],
+        pilot: '',
+        oat: '',
+        osm: '',
         pax: '',
+        heli_operations: '',
         victim_name: '',
         victim_origin_city: '',
         victim_origin_hospital: '',
@@ -44,7 +49,6 @@ export default function AdvancedFilters({ onFilterChange }) {
         const loadUsers = async () => {
             try {
                 const tripulantes = await base44.entities.Tripulante.list();
-                // Sort by trigram for easier finding
                 tripulantes.sort((a, b) => (a.trigrama || '').localeCompare(b.trigrama || ''));
                 setUsers(tripulantes);
             } catch (error) {
@@ -62,15 +66,26 @@ export default function AdvancedFilters({ onFilterChange }) {
         setFilters(prev => ({ ...prev, [field]: value }));
     };
 
-    const clearFilters = () => {
-        const emptyFilters = Object.keys(filters).reduce((acc, key) => {
-            acc[key] = '';
-            return acc;
-        }, {});
-        setFilters(emptyFilters);
+    const toggleMissionType = (type) => {
+        setFilters(prev => {
+            const current = prev.mission_types || [];
+            const exists = current.includes(type);
+            return { ...prev, mission_types: exists ? current.filter(t => t !== type) : [...current, type] };
+        });
     };
 
-    const activeFiltersCount = Object.values(filters).filter(v => v !== '').length;
+    const clearFilters = () => {
+        setFilters({
+            dateFrom: '', dateTo: '', timeFrom: '', timeTo: '', base: '',
+            samu_occurrence: '', sade_occurrence: '', mission_id: '', aircraft: '',
+            municipality: '', mission_types: [], pilot: '', oat: '', osm: '', pax: '',
+            heli_operations: '', victim_name: '', victim_origin_city: '', victim_origin_hospital: '',
+            victim_destination_city: '', victim_destination_hospital: '', transport_type: '',
+            transport_status: '', diagnosis: ''
+        });
+    };
+
+    const activeFiltersCount = Object.values(filters).filter(v => Array.isArray(v) ? v.length > 0 : v !== '').length;
 
     return (
         <Card className="mb-6">
@@ -108,234 +123,191 @@ export default function AdvancedFilters({ onFilterChange }) {
             
             {expanded && (
                 <CardContent className="space-y-6">
-                    {/* Filtros Temporais */}
+                    {/* Período */}
                     <div>
                         <h4 className="font-semibold text-sm text-slate-700 mb-3">Período</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
-                                <Label htmlFor="dateFrom">Data Inicial</Label>
-                                <Input
-                                    id="dateFrom"
-                                    type="date"
-                                    value={filters.dateFrom}
-                                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                                />
+                                <Label>Data Inicial</Label>
+                                <Input type="date" value={filters.dateFrom} onChange={(e) => handleFilterChange('dateFrom', e.target.value)} />
                             </div>
                             <div>
-                                <Label htmlFor="dateTo">Data Final</Label>
-                                <Input
-                                    id="dateTo"
-                                    type="date"
-                                    value={filters.dateTo}
-                                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                                />
+                                <Label>Data Final</Label>
+                                <Input type="date" value={filters.dateTo} onChange={(e) => handleFilterChange('dateTo', e.target.value)} />
+                            </div>
+                            <div>
+                                <Label>Horário Inicial</Label>
+                                <Input type="time" value={filters.timeFrom} onChange={(e) => handleFilterChange('timeFrom', e.target.value)} />
+                            </div>
+                            <div>
+                                <Label>Horário Final</Label>
+                                <Input type="time" value={filters.timeTo} onChange={(e) => handleFilterChange('timeTo', e.target.value)} />
                             </div>
                         </div>
                     </div>
 
-                    {/* Filtros da Missão */}
+                    {/* Dados da Missão */}
                     <div>
                         <h4 className="font-semibold text-sm text-slate-700 mb-3">Dados da Missão</h4>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
-                                <Label htmlFor="mission_id">Nº Missão</Label>
-                                <Input
-                                    id="mission_id"
-                                    value={filters.mission_id}
-                                    onChange={(e) => handleFilterChange('mission_id', e.target.value)}
-                                    placeholder="Ex: 123"
-                                />
+                                <Label>Nº Missão</Label>
+                                <Input value={filters.mission_id} onChange={(e) => handleFilterChange('mission_id', e.target.value)} placeholder="Ex: 123" />
                             </div>
                             <div>
-                                <Label htmlFor="sade_occurrence">Nº Ocorrência SADE</Label>
-                                <Input
-                                    id="sade_occurrence"
-                                    value={filters.sade_occurrence}
-                                    onChange={(e) => handleFilterChange('sade_occurrence', e.target.value)}
-                                />
+                                <Label>Nº Ocorrência SADE</Label>
+                                <Input value={filters.sade_occurrence} onChange={(e) => handleFilterChange('sade_occurrence', e.target.value)} />
                             </div>
                             <div>
-                                <Label htmlFor="samu_occurrence">Nº Ocorrência SAMU</Label>
-                                <Input
-                                    id="samu_occurrence"
-                                    value={filters.samu_occurrence}
-                                    onChange={(e) => handleFilterChange('samu_occurrence', e.target.value)}
-                                />
+                                <Label>Nº Ocorrência SAMU</Label>
+                                <Input value={filters.samu_occurrence} onChange={(e) => handleFilterChange('samu_occurrence', e.target.value)} />
                             </div>
                             <div>
-                                <Label htmlFor="aircraft">Aeronave</Label>
-                                <Select value={filters.aircraft} onValueChange={(v) => handleFilterChange('aircraft', v)}>
+                                <Label>Aeronave</Label>
+                                <Select value={filters.aircraft} onValueChange={(v) => handleFilterChange('aircraft', v === '__all__' ? '' : v)}>
                                     <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={null}>Todas</SelectItem>
+                                        <SelectItem value="__all__">Todas</SelectItem>
                                         {AIRCRAFT_OPTIONS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
-                                <Label htmlFor="municipality">Município</Label>
-                                <Input
-                                    id="municipality"
-                                    value={filters.municipality}
-                                    onChange={(e) => handleFilterChange('municipality', e.target.value)}
-                                    placeholder="Filtrar por município"
-                                />
+                                <Label>Município</Label>
+                                <Input value={filters.municipality} onChange={(e) => handleFilterChange('municipality', e.target.value)} placeholder="Filtrar por município" />
                             </div>
                             <div>
-                                <Label htmlFor="mission_type">Tipo de Missão</Label>
-                                <Select value={filters.mission_type} onValueChange={(v) => handleFilterChange('mission_type', v)}>
-                                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={null}>Todos</SelectItem>
-                                        {MISSION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label htmlFor="base">Base</Label>
-                                <Select value={filters.base} onValueChange={(v) => handleFilterChange('base', v)}>
+                                <Label>Base</Label>
+                                <Select value={filters.base} onValueChange={(v) => handleFilterChange('base', v === '__all__' ? '' : v)}>
                                     <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={null}>Todas</SelectItem>
+                                        <SelectItem value="__all__">Todas</SelectItem>
                                         {BASE_OPTIONS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Filtros da Tripulação */}
-                    <div>
-                        <h4 className="font-semibold text-sm text-slate-700 mb-3">Tripulação</h4>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                                <Label htmlFor="commander">Comandante</Label>
-                                <Input
-                                    id="commander"
-                                    value={filters.commander}
-                                    onChange={(e) => handleFilterChange('commander', e.target.value)}
-                                    placeholder="Nome do comandante"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="crew_member">Membro da Tripulação</Label>
-                                <Select value={filters.crew_member} onValueChange={(v) => handleFilterChange('crew_member', v)}>
-                                    <SelectTrigger><SelectValue placeholder="Qualquer membro" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={null}>Todos</SelectItem>
-                                        {users.map(u => (
-                                            <SelectItem key={u.id} value={u.trigrama}>
-                                                {u.trigrama} - {u.nome_de_guerra}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label htmlFor="pax">PAX</Label>
-                                <Input
-                                    id="pax"
-                                    value={filters.pax}
-                                    onChange={(e) => handleFilterChange('pax', e.target.value)}
-                                    placeholder="Passageiros"
-                                />
+                        {/* Tipos de Missão - Multi-select */}
+                        <div className="mt-4">
+                            <Label className="mb-2 block">Tipos de Missão {filters.mission_types.length > 0 && <span className="text-red-600 font-bold">({filters.mission_types.length} selecionados)</span>}</Label>
+                            <div className="border rounded-md p-3 space-y-3">
+                                <p className="text-xs font-semibold text-slate-500 uppercase">BM</p>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {MISSION_TYPES_BM.map(type => (
+                                        <div key={type} className="flex items-center gap-2">
+                                            <Checkbox
+                                                id={`bm-${type}`}
+                                                checked={filters.mission_types.includes(type)}
+                                                onCheckedChange={() => toggleMissionType(type)}
+                                            />
+                                            <label htmlFor={`bm-${type}`} className="text-sm cursor-pointer">{type}</label>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase pt-2 border-t">PM</p>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {MISSION_TYPES_PM.map(type => (
+                                        <div key={type} className="flex items-center gap-2">
+                                            <Checkbox
+                                                id={`pm-${type}`}
+                                                checked={filters.mission_types.includes(type)}
+                                                onCheckedChange={() => toggleMissionType(type)}
+                                            />
+                                            <label htmlFor={`pm-${type}`} className="text-sm cursor-pointer">{type}</label>
+                                        </div>
+                                    ))}
+                                </div>
+                                {filters.mission_types.length > 0 && (
+                                    <Button size="sm" variant="ghost" onClick={() => handleFilterChange('mission_types', [])} className="text-xs text-slate-500">
+                                        <X className="w-3 h-3 mr-1" /> Limpar tipos selecionados
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Filtros de Operações */}
+                    {/* Tripulação */}
+                    <div>
+                        <h4 className="font-semibold text-sm text-slate-700 mb-3">Tripulação</h4>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <Label>Piloto</Label>
+                                <Input value={filters.pilot} onChange={(e) => handleFilterChange('pilot', e.target.value)} placeholder="Nome do piloto" />
+                            </div>
+                            <div>
+                                <Label>OAT</Label>
+                                <Input value={filters.oat} onChange={(e) => handleFilterChange('oat', e.target.value)} placeholder="Nome do OAT" />
+                            </div>
+                            <div>
+                                <Label>OSM</Label>
+                                <Input value={filters.osm} onChange={(e) => handleFilterChange('osm', e.target.value)} placeholder="Nome do OSM" />
+                            </div>
+                            <div>
+                                <Label>PAX</Label>
+                                <Input value={filters.pax} onChange={(e) => handleFilterChange('pax', e.target.value)} placeholder="Passageiros" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Operações */}
                     <div>
                         <h4 className="font-semibold text-sm text-slate-700 mb-3">Operações</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                                <Label htmlFor="heli_operations">Operação Helitransportada</Label>
-                                <Input
-                                    id="heli_operations"
-                                    value={filters.heli_operations}
-                                    onChange={(e) => handleFilterChange('heli_operations', e.target.value)}
-                                    placeholder="Ex: Rapel, Guincho"
-                                />
+                                <Label>Operação Helitransportada</Label>
+                                <Input value={filters.heli_operations} onChange={(e) => handleFilterChange('heli_operations', e.target.value)} placeholder="Ex: Rapel, Guincho" />
                             </div>
                         </div>
                     </div>
 
-                    {/* Filtros da Vítima */}
+                    {/* Dados da Vítima */}
                     <div>
                         <h4 className="font-semibold text-sm text-slate-700 mb-3">Dados da Vítima</h4>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
-                                <Label htmlFor="victim_name">Nome</Label>
-                                <Input
-                                    id="victim_name"
-                                    value={filters.victim_name}
-                                    onChange={(e) => handleFilterChange('victim_name', e.target.value)}
-                                    placeholder="Nome da vítima"
-                                />
+                                <Label>Nome</Label>
+                                <Input value={filters.victim_name} onChange={(e) => handleFilterChange('victim_name', e.target.value)} placeholder="Nome da vítima" />
                             </div>
                             <div>
-                                <Label htmlFor="victim_origin_city">Cidade de Origem</Label>
-                                <Input
-                                    id="victim_origin_city"
-                                    value={filters.victim_origin_city}
-                                    onChange={(e) => handleFilterChange('victim_origin_city', e.target.value)}
-                                    placeholder="Cidade"
-                                />
+                                <Label>Cidade de Origem</Label>
+                                <Input value={filters.victim_origin_city} onChange={(e) => handleFilterChange('victim_origin_city', e.target.value)} placeholder="Cidade" />
                             </div>
                             <div>
-                                <Label htmlFor="victim_origin_hospital">Hospital de Origem</Label>
-                                <Input
-                                    id="victim_origin_hospital"
-                                    value={filters.victim_origin_hospital}
-                                    onChange={(e) => handleFilterChange('victim_origin_hospital', e.target.value)}
-                                    placeholder="Hospital"
-                                />
+                                <Label>Hospital de Origem</Label>
+                                <Input value={filters.victim_origin_hospital} onChange={(e) => handleFilterChange('victim_origin_hospital', e.target.value)} placeholder="Hospital" />
                             </div>
                             <div>
-                                <Label htmlFor="victim_destination_city">Cidade de Destino</Label>
-                                <Input
-                                    id="victim_destination_city"
-                                    value={filters.victim_destination_city}
-                                    onChange={(e) => handleFilterChange('victim_destination_city', e.target.value)}
-                                    placeholder="Cidade"
-                                />
+                                <Label>Cidade de Destino</Label>
+                                <Input value={filters.victim_destination_city} onChange={(e) => handleFilterChange('victim_destination_city', e.target.value)} placeholder="Cidade" />
                             </div>
                             <div>
-                                <Label htmlFor="victim_destination_hospital">Hospital de Destino</Label>
-                                <Input
-                                    id="victim_destination_hospital"
-                                    value={filters.victim_destination_hospital}
-                                    onChange={(e) => handleFilterChange('victim_destination_hospital', e.target.value)}
-                                    placeholder="Hospital"
-                                />
+                                <Label>Hospital de Destino</Label>
+                                <Input value={filters.victim_destination_hospital} onChange={(e) => handleFilterChange('victim_destination_hospital', e.target.value)} placeholder="Hospital" />
                             </div>
                             <div>
-                                <Label htmlFor="transport_type">Tipo de Transporte</Label>
-                                <Select value={filters.transport_type} onValueChange={(v) => handleFilterChange('transport_type', v)}>
+                                <Label>Tipo de Transporte</Label>
+                                <Select value={filters.transport_type} onValueChange={(v) => handleFilterChange('transport_type', v === '__all__' ? '' : v)}>
                                     <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={null}>Todos</SelectItem>
-                                        {TRANSPORT_TYPE_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                        <SelectItem value="__all__">Todos</SelectItem>
+                                        {["Resgate", "Remoção", "Órgão", "Treinamento Operacional"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div>
-                                <Label htmlFor="transport_status">Status do Transporte</Label>
-                                <Select value={filters.transport_status} onValueChange={(v) => handleFilterChange('transport_status', v)}>
+                                <Label>Status do Transporte</Label>
+                                <Select value={filters.transport_status} onValueChange={(v) => handleFilterChange('transport_status', v === '__all__' ? '' : v)}>
                                     <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={null}>Todos</SelectItem>
-                                        {TRANSPORT_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                        <SelectItem value="__all__">Todos</SelectItem>
+                                        {["Completo", "Cancelado", "Sem atendimento"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="md:col-span-2">
-                                <Label htmlFor="diagnosis">Diagnóstico/Lesão Principal</Label>
-                                <Input
-                                    id="diagnosis"
-                                    value={filters.diagnosis}
-                                    onChange={(e) => handleFilterChange('diagnosis', e.target.value)}
-                                    placeholder="Diagnóstico"
-                                />
+                                <Label>Diagnóstico/Lesão Principal</Label>
+                                <Input value={filters.diagnosis} onChange={(e) => handleFilterChange('diagnosis', e.target.value)} placeholder="Diagnóstico" />
                             </div>
                         </div>
                     </div>

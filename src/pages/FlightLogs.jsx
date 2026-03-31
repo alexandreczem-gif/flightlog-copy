@@ -72,15 +72,15 @@ export default function FlightLogs() {
   const applyFilters = () => {
     let results = logs.filter(log => {
       // Date filters
-      if (filters.dateFrom) {
-        const logDate = new Date(log.date);
-        const filterFromDate = new Date(filters.dateFrom);
-        if (logDate < filterFromDate) return false;
-      }
-      if (filters.dateTo) {
-        const logDate = new Date(log.date);
-        const filterToDate = new Date(filters.dateTo);
-        if (logDate > filterToDate) return false;
+      if (filters.dateFrom && log.date < filters.dateFrom) return false;
+      if (filters.dateTo && log.date > filters.dateTo) return false;
+
+      // Time filters (based on departure_time_1)
+      if (filters.timeFrom || filters.timeTo) {
+        const depTime = log.departure_time_1;
+        if (!depTime) return false;
+        if (filters.timeFrom && depTime < filters.timeFrom) return false;
+        if (filters.timeTo && depTime > filters.timeTo) return false;
       }
       
       // Mission filters
@@ -88,19 +88,23 @@ export default function FlightLogs() {
       if (filters.sade_occurrence && (!log.sade_occurrence_number || !log.sade_occurrence_number.toLowerCase().includes(filters.sade_occurrence.toLowerCase()))) return false;
       if (filters.aircraft && log.aircraft !== filters.aircraft) return false;
       if (filters.municipality && (!log.municipality || !log.municipality.toLowerCase().includes(filters.municipality.toLowerCase()))) return false;
-      if (filters.mission_type && log.mission_type !== filters.mission_type) return false;
+
+      // Multi-select mission types (BM or PM)
+      if (filters.mission_types && filters.mission_types.length > 0) {
+        const matchesBM = filters.mission_types.includes(log.mission_type);
+        const matchesPM = filters.mission_types.includes(log.mission_type_pm);
+        if (!matchesBM && !matchesPM) return false;
+      }
       
       // Crew filters
-      if (filters.commander && (!log.pilot_in_command || !log.pilot_in_command.toLowerCase().includes(filters.commander.toLowerCase()))) return false;
-      if (filters.crew_member) {
-        const crewMembers = [
-          log.pilot_in_command,
-          log.copilot,
-          log.oat_1, log.oat_2, log.oat_3,
-          log.osm_1, log.osm_2,
-          ...(log.crew_members || []) // Ensure crew_members is an array before spread
-        ].filter(Boolean); // Remove any null/undefined entries
-        if (!crewMembers.some(m => m.toLowerCase().includes(filters.crew_member.toLowerCase()))) return false;
+      if (filters.pilot && (!log.pilot_in_command || !log.pilot_in_command.toLowerCase().includes(filters.pilot.toLowerCase()))) return false;
+      if (filters.oat) {
+        const oatMatch = [log.oat_1, log.oat_2, log.oat_3].filter(Boolean).some(o => o.toLowerCase().includes(filters.oat.toLowerCase()));
+        if (!oatMatch) return false;
+      }
+      if (filters.osm) {
+        const osmMatch = [log.osm_1, log.osm_2].filter(Boolean).some(o => o.toLowerCase().includes(filters.osm.toLowerCase()));
+        if (!osmMatch) return false;
       }
       if (filters.pax && (!log.pax || !log.pax.toLowerCase().includes(filters.pax.toLowerCase()))) return false;
       
@@ -114,7 +118,7 @@ export default function FlightLogs() {
       if (filters.victim_destination_city && (!log.victim_destination_city || !log.victim_destination_city.toLowerCase().includes(filters.victim_destination_city.toLowerCase()))) return false;
       if (filters.victim_destination_hospital && (!log.victim_destination_hospital || !log.victim_destination_hospital.toLowerCase().includes(filters.victim_destination_hospital.toLowerCase()))) return false;
       
-      // Victim detailed record filters (need to match with VictimRecord)
+      // Victim detailed record filters
       const hasVictimRecordFilters = filters.base || filters.samu_occurrence || filters.transport_type || filters.transport_status || filters.diagnosis;
       if (hasVictimRecordFilters) {
         const victimRecord = victimRecords.find(vr => vr.flight_log_id === log.id);
@@ -125,7 +129,6 @@ export default function FlightLogs() {
           if (filters.transport_status && victimRecord.status_transporte !== filters.transport_status) return false;
           if (filters.diagnosis && (!victimRecord.diagnostico_lesao_principal || !victimRecord.diagnostico_lesao_principal.toLowerCase().includes(filters.diagnosis.toLowerCase()))) return false;
         } else {
-          // If we're filtering by victim record fields but there's no record, exclude this log
           return false;
         }
       }
