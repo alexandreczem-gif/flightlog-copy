@@ -567,7 +567,7 @@ export default function CadastroBase() {
             )}
           </TabsContent>
 
-          {/* Tripulantes */
+          {/* Tripulantes */}
           <TabsContent value="tripulantes" className="space-y-4">
             <div className="flex justify-between">
               <div className="flex gap-2">
