@@ -1,0 +1,26 @@
+{
+  "name": "BaseOperacional",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da base operacional (Ex: Curitiba Resgate)"
+    },
+    "ativa": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se a base est\u00e1 ativa"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {},
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
