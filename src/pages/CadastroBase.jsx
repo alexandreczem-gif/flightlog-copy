@@ -561,7 +561,7 @@ export default function CadastroBase() {
               <Button onClick={() => { setEditingCity(null); setShowCityForm(true); }}><Plus className="w-4 h-4 mr-2" />Nova Cidade</Button>
             </div>
             {showCityForm ? (
-              <CityForm city={editingCity} onSubmit={handleCitySubmit} onCancel={() => { setShowCityForm(false); setEditingCity(null); }} />
+              <CityForm city={editingCity} onSave={handleCitySubmit} onCancel={() => { setShowCityForm(false); setEditingCity(null); }} />
             ) : (
               <CityTable cities={cities} onEdit={(c) => { setEditingCity(c); setShowCityForm(true); }} onDelete={handleCityDelete} isLoading={isLoading} />
             )}
