@@ -544,7 +544,7 @@ export default function CadastroBase() {
               <Button onClick={() => { setEditingHospital(null); setShowHospitalForm(true); }}><Plus className="w-4 h-4 mr-2" />Novo Hospital</Button>
             </div>
             {showHospitalForm ? (
-              <HospitalForm hospital={editingHospital} onSubmit={handleHospitalSubmit} onCancel={() => { setShowHospitalForm(false); setEditingHospital(null); }} />
+              <HospitalForm hospital={editingHospital} onSave={handleHospitalSubmit} onCancel={() => { setShowHospitalForm(false); setEditingHospital(null); }} />
             ) : (
               <HospitalTable hospitais={hospitais} onEdit={(h) => { setEditingHospital(h); setShowHospitalForm(true); }} onDelete={handleHospitalDelete} isLoading={isLoading} />
             )}
