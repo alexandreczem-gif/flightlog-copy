@@ -563,7 +563,7 @@ export default function CadastroBase() {
             {showHospitalForm ? (
               <HospitalForm hospital={editingHospital} onSave={handleHospitalSubmit} onCancel={() => { setShowHospitalForm(false); setEditingHospital(null); }} />
             ) : (
-              <HospitalTable hospitais={hospitais} onEdit={(h) => { setEditingHospital(h); setShowHospitalForm(true); }} onDelete={handleHospitalDelete} isLoading={isLoading} />
+              <HospitalTable hospitals={hospitais} onEdit={(h) => { setEditingHospital(h); setShowHospitalForm(true); }} onDelete={handleHospitalDelete} isLoading={isLoading} />
             )}
           </TabsContent>
 
