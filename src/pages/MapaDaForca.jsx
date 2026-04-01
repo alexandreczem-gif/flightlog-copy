@@ -16,9 +16,9 @@ import { ServiceReportButton } from '@/components/reports/ServiceReport';
 import { MultiServiceReport } from '@/components/reports/MultiServiceReport';
 
 const AIRCRAFT_OPTIONS = ["Arcanjo 01", "Falcão 01", "Falcão 03", "Falcão 04", "Falcão 07", "Falcão 08", "Falcão 12", "Falcão 13", "Falcão 14", "Falcão 15"];
-const BASE_OPTIONS = ["Litoral Resgate", "Litoral Policial", "Curitiba Resgate", "Curitiba Policial", "Londrina Policial", "Cascavel Policial", "Umuarama Policial"];
 
 export default function MapaDaForca() {
+  const [baseOptions, setBaseOptions] = useState([]);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("aircraft");
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +71,9 @@ export default function MapaDaForca() {
     };
     init();
     loadData();
+    base44.entities.BaseOperacional.filter({ ativa: true }).then(list => {
+      setBaseOptions(list.map(b => b.name));
+    }).catch(() => {});
   }, []);
 
   const loadData = async () => {
@@ -436,7 +439,7 @@ export default function MapaDaForca() {
                       <Label>Base</Label>
                       <Select value={aircraftForm.base} onValueChange={v => setAircraftForm({...aircraftForm, base: v})}>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>{BASE_OPTIONS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        <SelectContent>{baseOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -532,7 +535,7 @@ export default function MapaDaForca() {
                       <Label>Base</Label>
                       <Select value={uaaForm.base} onValueChange={v => setUaaForm({...uaaForm, base: v})} disabled={showInitialFuel}>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>{BASE_OPTIONS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        <SelectContent>{baseOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -610,7 +613,7 @@ export default function MapaDaForca() {
             )}
 
             {/* Group by Base */}
-            {BASE_OPTIONS.map(base => {
+            {[...new Set(todayServices.map(s => s.base))].map(base => {
               const baseServices = todayServices.filter(s => s.base === base);
               if (baseServices.length === 0) return null;
 

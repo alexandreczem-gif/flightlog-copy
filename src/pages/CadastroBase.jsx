@@ -533,6 +533,23 @@ export default function CadastroBase() {
             </div>
           </TabsContent>
 
+          {/* Aeródromos */}
+          <TabsContent value="aerodromos" className="space-y-4">
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => exportToCSV(aerodromos, 'aerodromos', ['icao_code', 'latitude_raw', 'longitude_raw'])}><Download className="w-4 h-4 mr-2" />Exportar CSV</Button>
+                <label><input type="file" accept=".csv" className="hidden" onChange={(e) => handleImportCSV('Aerodromo', e)} /><Button variant="outline" asChild><span><Upload className="w-4 h-4 mr-2" />Importar CSV</span></Button></label>
+                <Button variant="outline" onClick={() => handleDeleteAll('Aerodromo', 'Aeródromos')} className="text-red-600 hover:text-red-700"><Trash className="w-4 h-4 mr-2" />Excluir Tudo</Button>
+              </div>
+              <Button onClick={() => { setEditingAerodromo(null); setShowAerodromoForm(true); }}><Plus className="w-4 h-4 mr-2" />Novo Aeródromo</Button>
+            </div>
+            {showAerodromoForm ? (
+              <AerodromoForm aerodromo={editingAerodromo} onSave={handleAerodromoSubmit} onCancel={() => { setShowAerodromoForm(false); setEditingAerodromo(null); }} />
+            ) : (
+              <AerodromoTable aerodromos={aerodromos} onEdit={(a) => { setEditingAerodromo(a); setShowAerodromoForm(true); }} onDelete={handleAerodromoDelete} isLoading={isLoading} />
+            )}
+          </TabsContent>
+
           {/* Hospitais */}
           <TabsContent value="hospitais" className="space-y-4">
             <div className="flex justify-between">

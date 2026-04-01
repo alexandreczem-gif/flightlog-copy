@@ -181,19 +181,22 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   const [hospitals, setHospitals] = useState([]);
   const [cities, setCities] = useState([]);
   const [availableBases, setAvailableBases] = useState([]);
+  const [allBases, setAllBases] = useState([]);
   const [pendingVictims, setPendingVictims] = useState([]);
   const [selectedServiceId, setSelectedServiceId] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [tripulantesList, aerodromosList, hospitalsList, citiesList, victimRecords] = await Promise.all([
+        const [tripulantesList, aerodromosList, hospitalsList, citiesList, victimRecords, basesList] = await Promise.all([
           base44.entities.Tripulante.list(),
           base44.entities.Aerodromo.list(),
           base44.entities.Hospital.list(),
           base44.entities.City.list(),
-          base44.entities.VictimRecord.filter({ pending_registration: true })
+          base44.entities.VictimRecord.filter({ pending_registration: true }),
+          base44.entities.BaseOperacional.filter({ ativa: true })
         ]);
+        setAllBases(basesList.map(b => b.name));
         
         setHospitals(hospitalsList);
         setCities(citiesList);
@@ -686,13 +689,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Litoral Resgate">Litoral Resgate</SelectItem>
-                    <SelectItem value="Litoral Policial">Litoral Policial</SelectItem>
-                    <SelectItem value="Curitiba Resgate">Curitiba Resgate</SelectItem>
-                    <SelectItem value="Curitiba Policial">Curitiba Policial</SelectItem>
-                    <SelectItem value="Londrina Policial">Londrina Policial</SelectItem>
-                    <SelectItem value="Cascavel Policial">Cascavel Policial</SelectItem>
-                    <SelectItem value="Umuarama Policial">Umuarama Policial</SelectItem>
+                    {allBases.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
