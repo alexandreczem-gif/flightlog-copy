@@ -206,7 +206,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
           id: t.id,
           nome_de_guerra: t.nome_de_guerra,
           trigrama: t.trigrama,
-          funcao: t.funcao
+          funcao: t.funcao,
+          posto_graduacao: t.posto_graduacao
         }));
         
         setUsers(tripulanteList);
@@ -586,7 +587,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
   const userGroups = {
     pilots: users.filter(u => u.funcao === 'Piloto'),
     oats: users.filter(u => u.funcao === 'OAT'),
-    osms: users.filter(u => u.funcao === 'OSM')
+    osmMedicos: users.filter(u => u.funcao === 'OSM' && u.posto_graduacao === 'Médico'),
+    osmEnfermeiros: users.filter(u => u.funcao === 'OSM' && u.posto_graduacao === 'Enfermeiro')
   };
 
   const isZZZZ = (icaoCode) => {
@@ -1017,8 +1019,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <UserSelect field="osm_1" label="OSM 1" value={formData.osm_1} onChange={v => handleChange('osm_1', v)} userList={userGroups.osms} />
-            <UserSelect field="osm_2" label="OSM 2" value={formData.osm_2} onChange={v => handleChange('osm_2', v)} userList={userGroups.osms} />
+            <UserSelect field="osm_1" label="OSM-Médico" value={formData.osm_1} onChange={v => handleChange('osm_1', v)} userList={userGroups.osmMedicos} />
+            <UserSelect field="osm_2" label="OSM-Enfermeiro" value={formData.osm_2} onChange={v => handleChange('osm_2', v)} userList={userGroups.osmEnfermeiros} />
           </div>
         </CardContent>
       </Card>

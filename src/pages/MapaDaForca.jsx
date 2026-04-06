@@ -117,6 +117,9 @@ export default function MapaDaForca() {
     return tripulantes.filter(t => t.funcao === role);
   };
 
+  const getOSMMedicos = () => tripulantes.filter(t => t.funcao === 'OSM' && t.posto_graduacao === 'Médico');
+  const getOSMEnfermeiros = () => tripulantes.filter(t => t.funcao === 'OSM' && t.posto_graduacao === 'Enfermeiro');
+
   const checkOverlap = (name, start, end) => {
     // Check overlap for same resource name ON THE SAME DATE
     const startMinutes = timeToMinutes(start);
@@ -482,17 +485,17 @@ export default function MapaDaForca() {
                         </SelectContent>
                       </Select>
                       <Select value={aircraftForm.osm_1} onValueChange={v => setAircraftForm({...aircraftForm, osm_1: v})}>
-                        <SelectTrigger><SelectValue placeholder="OSM 1" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="OSM-Médico" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none_">Nenhum</SelectItem>
-                          {getAvailableUsers('OSM').map(u => <SelectItem key={u.id} value={u.nome_de_guerra}>{u.trigrama} - {u.nome_de_guerra}</SelectItem>)}
+                          {getOSMMedicos().map(u => <SelectItem key={u.id} value={u.nome_de_guerra}>{u.trigrama} - {u.nome_de_guerra}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Select value={aircraftForm.osm_2} onValueChange={v => setAircraftForm({...aircraftForm, osm_2: v})}>
-                        <SelectTrigger><SelectValue placeholder="OSM 2" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="OSM-Enfermeiro" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="_none_">Nenhum</SelectItem>
-                          {getAvailableUsers('OSM').map(u => <SelectItem key={u.id} value={u.nome_de_guerra}>{u.trigrama} - {u.nome_de_guerra}</SelectItem>)}
+                          {getOSMEnfermeiros().map(u => <SelectItem key={u.id} value={u.nome_de_guerra}>{u.trigrama} - {u.nome_de_guerra}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Select value={aircraftForm.tasa} onValueChange={v => setAircraftForm({...aircraftForm, tasa: v})}>

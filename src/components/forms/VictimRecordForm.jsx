@@ -596,8 +596,8 @@ export default function VictimRecordForm({ initialData, onSave, isSaving }) {
                     <div><Label>Comandante</Label><Input value={data.comandante} readOnly className="bg-slate-100" /></div>
                     <div><Label>Copiloto</Label><Input value={data.copiloto} readOnly className="bg-slate-100" /></div>
                     <div><Label>OAT 1</Label><Input value={data.oat_1} readOnly className="bg-slate-100" /></div>
-                    <div><Label>OSM 1</Label><Input value={data.osm_1} readOnly className="bg-slate-100" /></div>
-                    <div><Label>OSM 2</Label><Input value={data.osm_2} readOnly className="bg-slate-100" /></div>
+                    <div><Label>OSM-Médico</Label><Input value={data.osm_1} readOnly className="bg-slate-100" /></div>
+                    <div><Label>OSM-Enfermeiro</Label><Input value={data.osm_2} readOnly className="bg-slate-100" /></div>
                 </div>
             </FormSection>
 
