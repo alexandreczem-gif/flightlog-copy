@@ -117,6 +117,17 @@ export default function HospitalForm({ hospital, onSave, onCancel, isSaving }) {
             </div>
 
             <div>
+              <Label htmlFor="municipality">Município *</Label>
+              <CitySelect
+                value={formData.municipality}
+                onChange={(v) => handleChange('municipality', v)}
+                placeholder="Selecione o município..."
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
               <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
@@ -125,41 +136,7 @@ export default function HospitalForm({ hospital, onSave, onCancel, isSaving }) {
                 placeholder="Ex: (41) 3333-4444"
               />
             </div>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="municipality">Município *</Label>
-              <CitySelect 
-                value={formData.municipality}
-                onChange={(v) => handleChange('municipality', v)}
-                placeholder="Selecione o município..."
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Selecione uma das cidades cadastradas no sistema
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="esfera_administrativa">Esfera Administrativa</Label>
-              <Select 
-                value={formData.esfera_administrativa} 
-                onValueChange={(v) => handleChange('esfera_administrativa', v)}
-              >
-                <SelectTrigger id="esfera_administrativa">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Federal">Federal</SelectItem>
-                  <SelectItem value="Estadual">Estadual</SelectItem>
-                  <SelectItem value="Municipal">Municipal</SelectItem>
-                  <SelectItem value="Privada">Privada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="latitude">Latitude (Decimal)</Label>
               <Input
@@ -185,13 +162,33 @@ export default function HospitalForm({ hospital, onSave, onCancel, isSaving }) {
             </div>
           </div>
 
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="esfera_administrativa">Esfera Administrativa</Label>
+              <Select
+                value={formData.esfera_administrativa}
+                onValueChange={(v) => handleChange('esfera_administrativa', v)}
+              >
+                <SelectTrigger id="esfera_administrativa">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Federal">Federal</SelectItem>
+                  <SelectItem value="Estadual">Estadual</SelectItem>
+                  <SelectItem value="Municipal">Municipal</SelectItem>
+                  <SelectItem value="Privada">Privada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onCancel}>
               <X className="w-4 h-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSaving}
               className="bg-green-600 hover:bg-green-700"
             >
