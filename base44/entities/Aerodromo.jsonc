@@ -1,0 +1,42 @@
+{
+  "name": "Aerodromo",
+  "type": "object",
+  "properties": {
+    "icao_code": {
+      "type": "string",
+      "description": "C\u00f3digo ICAO do aer\u00f3dromo (4 letras)",
+      "pattern": "^[A-Z]{4}$",
+      "maxLength": 4,
+      "minLength": 4
+    },
+    "latitude_raw": {
+      "type": "string",
+      "description": "Latitude no formato DDMMSS"
+    },
+    "longitude_raw": {
+      "type": "string",
+      "description": "Longitude no formato DDMMSS"
+    },
+    "latitude_decimal": {
+      "type": "number",
+      "description": "Latitude em formato decimal (negativo para Sul)"
+    },
+    "longitude_decimal": {
+      "type": "number",
+      "description": "Longitude em formato decimal (negativo para Oeste)"
+    }
+  },
+  "required": [
+    "icao_code",
+    "latitude_raw",
+    "longitude_raw"
+  ],
+  "rls": {
+    "read": {},
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
