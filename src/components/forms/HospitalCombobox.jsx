@@ -26,27 +26,21 @@ export default function HospitalCombobox({ value, onChange, placeholder, disable
   }, [value]);
 
   useEffect(() => {
-    if (searchTerm.length >= 0) {
-      let filtered = hospitals;
-      
-      // Filter by city first if provided
-      if (cityFilter) {
-        filtered = filtered.filter(h => h.municipality === cityFilter);
-      }
-
-      // Then filter by search term
-      if (searchTerm) {
-        filtered = filtered.filter(h =>
-          h.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      
-      setFilteredHospitals(filtered.slice(0, 10));
-      setShowSuggestions(searchTerm.length >= 2 && filtered.length > 0);
-    } else {
-      setFilteredHospitals([]);
-      setShowSuggestions(false);
+    let filtered = hospitals;
+    
+    // Filter by city first if provided
+    if (cityFilter) {
+      filtered = filtered.filter(h => h.municipality === cityFilter);
     }
+
+    // Then filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(h =>
+        h.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredHospitals(filtered.slice(0, 10));
   }, [searchTerm, hospitals, cityFilter]);
 
   useEffect(() => {
@@ -70,6 +64,7 @@ export default function HospitalCombobox({ value, onChange, placeholder, disable
     const newValue = e.target.value;
     setSearchTerm(newValue);
     onChange(newValue);
+    setShowSuggestions(true);
   };
 
   return (
@@ -77,7 +72,7 @@ export default function HospitalCombobox({ value, onChange, placeholder, disable
       <Input
         value={searchTerm}
         onChange={handleInputChange}
-        onFocus={() => (searchTerm.length >= 2 || (cityFilter && filteredHospitals.length > 0)) && setShowSuggestions(true)}
+        onFocus={() => filteredHospitals.length > 0 && setShowSuggestions(true)}
         placeholder={placeholder || "Digite o nome do hospital..."}
         disabled={disabled}
         className={disabled ? "bg-slate-100 cursor-not-allowed" : ""}
