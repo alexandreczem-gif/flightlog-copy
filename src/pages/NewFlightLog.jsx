@@ -202,7 +202,10 @@ export default function NewFlightLog() {
       local_pouso_origem: victim.origin_landing_site || '',
       cidade_destino: victim.destination_city || '',
       hospital_destino: victim.destination_hospital || '',
-      local_pouso_destino: victim.destination_landing_site || ''
+      local_pouso_destino: victim.destination_landing_site || '',
+      compressor_toracico: 'Não Disponível',
+      ultrassom_portatil: 'Não Disponível',
+      babypod: 'Não Disponível'
     };
   };
 
