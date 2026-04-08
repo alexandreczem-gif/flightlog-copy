@@ -263,14 +263,16 @@ export default function AbastecimentosPage() {
           rowValues.push(currentVal.trim().replace(/^"|"$/g, ''));
           const row = {};
           headers.forEach((h, idx) => { if (rowValues[idx] !== undefined) row[h] = rowValues[idx]; });
-          if (row.date) {
+          const dateVal = row['Data'] || row['date'] || '';
+          if (dateVal) {
+            const uaaFlag = row['Abastecimento UAA'] === 'Sim' || row['uaa_abastecimento'] === 'true' || row['uaa_abastecimento'] === true;
             const mapped = {
-              date: row['Data'] || row['date'] || '',
+              date: dateVal,
               time: row['Hora'] || row['time'] || '',
               aircraft_prefix: row['Prefixo Aeronave'] || row['aircraft_prefix'] || '',
               aircraft_designator: row['Designativo Aeronave'] || row['aircraft_designator'] || '',
               quantity_liters: Number(row['Quantidade (L)'] || row['quantity_liters'] || 0),
-              uaa_abastecimento: (row['Abastecimento UAA'] || row['uaa_abastecimento'] || '') === 'Sim' || (row['uaa_abastecimento'] === 'true'),
+              uaa_abastecimento: uaaFlag,
               uaa_plate: row['Placa UAA'] || row['uaa_plate'] || '',
               nota_numero: row['Número Nota'] || row['nota_numero'] || ''
             };
