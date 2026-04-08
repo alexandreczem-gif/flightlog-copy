@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Download, Fuel, Truck } from 'lucide-react';
+import { Save, Download, Fuel, Truck, Upload } from 'lucide-react';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
@@ -48,6 +49,8 @@ export default function AbastecimentosPage() {
   const [today, setToday] = useState('');
   const [uaaList, setUaaList] = useState([]);
   const [uaaFuels, setUaaFuels] = useState({});
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const date = new Date();
@@ -235,6 +238,64 @@ export default function AbastecimentosPage() {
     }
   };
 
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target.result;
+        const lines = text.split('\n');
+        if (lines.length < 2) return;
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const dataToImport = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const rowValues = [];
+          let currentVal = '';
+          let inQuotes = false;
+          for (let char of lines[i]) {
+            if (char === '"') { inQuotes = !inQuotes; }
+            else if (char === ',' && !inQuotes) { rowValues.push(currentVal.trim().replace(/^"|"$/g, '')); currentVal = ''; }
+            else { currentVal += char; }
+          }
+          rowValues.push(currentVal.trim().replace(/^"|"$/g, ''));
+          const row = {};
+          headers.forEach((h, idx) => { if (rowValues[idx] !== undefined) row[h] = rowValues[idx]; });
+          if (row.date) {
+            const mapped = {
+              date: row['Data'] || row['date'] || '',
+              time: row['Hora'] || row['time'] || '',
+              aircraft_prefix: row['Prefixo Aeronave'] || row['aircraft_prefix'] || '',
+              aircraft_designator: row['Designativo Aeronave'] || row['aircraft_designator'] || '',
+              quantity_liters: Number(row['Quantidade (L)'] || row['quantity_liters'] || 0),
+              uaa_abastecimento: (row['Abastecimento UAA'] || row['uaa_abastecimento'] || '') === 'Sim' || (row['uaa_abastecimento'] === 'true'),
+              uaa_plate: row['Placa UAA'] || row['uaa_plate'] || '',
+              nota_numero: row['Número Nota'] || row['nota_numero'] || ''
+            };
+            dataToImport.push(mapped);
+          }
+        }
+        if (!window.confirm(`Importar ${dataToImport.length} registros de abastecimento?`)) {
+          setIsImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+        await Promise.all(dataToImport.map(d => base44.entities.Abastecimento.create(d)));
+        alert(`${dataToImport.length} registros importados com sucesso!`);
+        loadData();
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao processar arquivo CSV.');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -313,7 +374,13 @@ export default function AbastecimentosPage() {
             <h1 className="text-3xl font-bold text-slate-900">Registro de Abastecimento</h1>
             <p className="text-slate-600">Adicione um novo registro e visualize os abastecimentos do mês.</p>
           </div>
-          <Button onClick={handleExport} disabled={isExporting}><Download className="w-4 h-4 mr-2" />{isExporting ? "Exportando..." : "Exportar Tudo"}</Button>
+          <div className="flex gap-2">
+            <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isImporting} variant="outline">
+              <Upload className="w-4 h-4 mr-2" />{isImporting ? 'Importando...' : 'Importar CSV'}
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting}><Download className="w-4 h-4 mr-2" />{isExporting ? "Exportando..." : "Exportar Tudo"}</Button>
+          </div>
         </motion.div>
 
         {/* Cards de Combustível UAA */}

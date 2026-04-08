@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { VictimRecord } from "@/entities/VictimRecord";
-import { User } from '@/entities/User';
+import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stethoscope, UserPlus, Download, Pencil, Trash2 } from 'lucide-react';
@@ -43,7 +42,7 @@ export default function VictimRecords() {
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const user = await User.me();
+            const user = await base44.auth.me();
             const userIsAdmin = user.role === 'admin' || user.flight_log_role === 'Administrador';
             setIsAdmin(userIsAdmin);
             const allowedRoles = ["Administrador", "OSM", "Piloto", "OAT"];
@@ -52,19 +51,11 @@ export default function VictimRecords() {
                 return;
             }
 
-            const detailedRecords = await VictimRecord.list('-created_date');
+            const detailedRecords = await base44.entities.VictimRecord.list('-created_date');
 
             // Separar registros completos e pendentes
-            let completed = detailedRecords.filter(r => !r.pending_registration);
+            const completed = detailedRecords.filter(r => !r.pending_registration);
             const pendingPreDetailed = detailedRecords.filter(r => r.pending_registration);
-
-            // Filtrar últimos 10 dias para não-admins
-            if (!userIsAdmin) {
-                const tenDaysAgo = new Date();
-                tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-                const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0];
-                completed = completed.filter(r => r.data >= tenDaysAgoStr);
-            }
 
             setCompletedRecords(completed);
 
@@ -227,7 +218,7 @@ export default function VictimRecords() {
 
     const handleDelete = async (recordId) => {
         try {
-            await VictimRecord.delete(recordId);
+            await base44.entities.VictimRecord.delete(recordId);
             await logAction('delete', 'VictimRecord', recordId, 'Registro de vítima excluído');
             loadData();
         } catch (error) {
@@ -415,7 +406,7 @@ export default function VictimRecords() {
                     return;
                 }
 
-                await Promise.all(parsedData.map(d => VictimRecord.create(d)));
+                await Promise.all(parsedData.map(d => base44.entities.VictimRecord.create(d)));
                 alert(`${parsedData.length} registros importados com sucesso!`);
                 loadData();
             } catch (error) {
