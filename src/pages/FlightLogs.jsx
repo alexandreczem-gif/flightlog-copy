@@ -351,19 +351,19 @@ export default function FlightLogs() {
     reader.onload = async (event) => {
       try {
         const text = event.target.result;
-        // Parse simple CSV - careful with quoted strings containing commas
-        // This is a basic parser, might need a library for robust CSV parsing
-        // For now, assuming simple CSV or standard quotes
         const lines = text.split('\n');
         if (lines.length < 2) return;
 
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        // Strip BOM and quotes from headers
+        const headers = lines[0].replace(/^\uFEFF/, '').split(',').map(h => h.trim().replace(/^"|"$/g, ''));
         const dataToImport = [];
+
+        // Fields to skip on import (system/read-only fields)
+        const SKIP_FIELDS = new Set(['id', 'created_by', 'created_by_id', 'created_date', 'updated_date', 'is_sample']);
 
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           
-          // Basic split logic handling quotes
           const rowValues = [];
           let currentVal = '';
           let inQuotes = false;
@@ -372,17 +372,17 @@ export default function FlightLogs() {
             if (char === '"') {
               inQuotes = !inQuotes;
             } else if (char === ',' && !inQuotes) {
-              rowValues.push(currentVal.trim().replace(/^"|"$/g, '')); // Trim quotes
+              rowValues.push(currentVal.replace(/^"|"$/g, ''));
               currentVal = '';
             } else {
               currentVal += char;
             }
           }
-          rowValues.push(currentVal.trim().replace(/^"|"$/g, ''));
+          rowValues.push(currentVal.replace(/^"|"$/g, ''));
 
           const row = {};
           headers.forEach((h, idx) => {
-            if (rowValues[idx] !== undefined) row[h] = rowValues[idx];
+            if (rowValues[idx] !== undefined && !SKIP_FIELDS.has(h)) row[h] = rowValues[idx].trim();
           });
           
           if (Object.keys(row).length > 0) dataToImport.push(row);
@@ -396,35 +396,55 @@ export default function FlightLogs() {
         const parsedData = dataToImport.map(row => {
           const newRow = { ...row };
           
-          // Handle array fields
-          ['heli_operations', 'crew_members', 'victims'].forEach(field => {
+          // Handle array/object fields
+          ['heli_operations', 'crew_members'].forEach(field => {
             if (!newRow[field]) {
               newRow[field] = [];
             } else if (typeof newRow[field] === 'string') {
-              // If it looks like a JSON array, parse it
               if (newRow[field].trim().startsWith('[')) {
-                try {
-                  newRow[field] = JSON.parse(newRow[field]);
-                } catch (e) {
-                  newRow[field] = [];
-                }
+                try { newRow[field] = JSON.parse(newRow[field]); } catch (e) { newRow[field] = []; }
               } else {
-                // Otherwise treat as semicolon separated string
                 newRow[field] = newRow[field].split(';').map(s => s.trim()).filter(Boolean);
               }
             }
           });
-          
-          // Handle numbers
-          ['mission_id', 'flight_duration', 'rescued_victims_count', 'helibalde_launches', 'helibalde_load_liters', 'external_load_time_min', 'external_load_kg'].forEach(field => {
-            const val = newRow[field];
-            if (val === undefined || val === null || val === '' || isNaN(Number(val))) {
-              // For required fields like flight_duration, 0 is a safer fallback than null
-              // For counts, 0 is also appropriate
-              newRow[field] = 0;
+
+          // Handle victims: can be a JSON object {}, JSON array [], semicolon-separated, or empty
+          if (!newRow['victims']) {
+            newRow['victims'] = [];
+          } else if (typeof newRow['victims'] === 'string' && newRow['victims'].trim()) {
+            const v = newRow['victims'].trim();
+            if (v.startsWith('[')) {
+              try { newRow['victims'] = JSON.parse(v); } catch (e) { newRow['victims'] = []; }
+            } else if (v.startsWith('{')) {
+              try { newRow['victims'] = [JSON.parse(v)]; } catch (e) { newRow['victims'] = []; }
             } else {
-              newRow[field] = Number(val);
+              newRow['victims'] = v.split(';').map(s => s.trim()).filter(Boolean);
             }
+          }
+
+          // Handle flight_duration: convert HH:MM to minutes if needed
+          if (newRow['flight_duration']) {
+            const durVal = String(newRow['flight_duration']);
+            if (durVal.includes(':')) {
+              const [h, m] = durVal.split(':').map(Number);
+              newRow['flight_duration'] = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+            } else {
+              newRow['flight_duration'] = Number(durVal) || 0;
+            }
+          } else {
+            newRow['flight_duration'] = 0;
+          }
+
+          // Handle other numeric fields
+          ['mission_id', 'rescued_victims_count', 'helibalde_launches', 'helibalde_load_liters', 'external_load_time_min', 'external_load_kg', 'oriented_people_count'].forEach(field => {
+            const val = newRow[field];
+            newRow[field] = (val === undefined || val === null || val === '' || isNaN(Number(val))) ? 0 : Number(val);
+          });
+
+          // Handle booleans
+          ['is_regular_scale'].forEach(field => {
+            if (newRow[field] !== undefined) newRow[field] = newRow[field] === 'true' || newRow[field] === true;
           });
 
           return newRow;
