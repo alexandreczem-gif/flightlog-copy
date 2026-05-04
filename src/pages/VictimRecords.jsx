@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stethoscope, UserPlus, Download, Pencil, Trash2 } from 'lucide-react';
+import { Stethoscope, UserPlus, Download, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -215,6 +215,21 @@ export default function VictimRecords() {
 
         setFilteredRecords(results);
     }, [filters, completedRecords]);
+
+    const handleDeleteAll = async () => {
+        const allRecords = [...completedRecords, ...pendingVictims];
+        const first = window.confirm(`Tem certeza que deseja EXCLUIR TODOS os ${allRecords.length} registros de vítimas? Esta ação não pode ser desfeita.`);
+        if (!first) return;
+        const second = window.confirm(`CONFIRMAÇÃO FINAL: Todos os ${allRecords.length} registros serão permanentemente excluídos. Continuar?`);
+        if (!second) return;
+        try {
+            await Promise.all(allRecords.map(r => base44.entities.VictimRecord.delete(r.id)));
+            loadData();
+        } catch (error) {
+            console.error("Erro ao excluir registros:", error);
+            alert("Ocorreu um erro ao excluir os registros.");
+        }
+    };
 
     const handleDelete = async (recordId) => {
         try {
@@ -466,6 +481,14 @@ export default function VictimRecords() {
                                 <Button onClick={handleExport} disabled={isExporting || filteredRecords.length === 0}>
                                     <Download className="w-4 h-4 mr-2" />
                                     {isExporting ? "Exportando..." : `Exportar Filtrados (${filteredRecords.length})`}
+                                </Button>
+                                <Button
+                                    onClick={handleDeleteAll}
+                                    disabled={completedRecords.length === 0 && pendingVictims.length === 0}
+                                    variant="destructive"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir Todos
                                 </Button>
                             </>
                         )}

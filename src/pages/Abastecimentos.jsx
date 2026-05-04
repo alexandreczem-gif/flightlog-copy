@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Download, Fuel, Truck, Upload } from 'lucide-react';
+import { Save, Download, Fuel, Truck, Upload, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -138,6 +138,7 @@ export default function AbastecimentosPage() {
           navigate(createPageUrl("Dashboard"));
           return;
         }
+        setIsAdmin(currentUser.role === 'admin' || currentUser.flight_log_role === 'Administrador');
         loadData();
       } catch (error) {
         console.error("Erro ao verificar acesso:", error);
@@ -224,6 +225,22 @@ export default function AbastecimentosPage() {
     } catch (error) {
       console.error("Erro ao atualizar abastecimento:", error);
       alert("Ocorreu um erro ao atualizar o registro.");
+    }
+  };
+
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const handleDeleteAll = async () => {
+    const first = window.confirm(`Tem certeza que deseja EXCLUIR TODOS os ${abastecimentos.length} registros de abastecimento? Esta ação não pode ser desfeita.`);
+    if (!first) return;
+    const second = window.confirm(`CONFIRMAÇÃO FINAL: Todos os ${abastecimentos.length} registros serão permanentemente excluídos. Continuar?`);
+    if (!second) return;
+    try {
+      await Promise.all(abastecimentos.map(a => base44.entities.Abastecimento.delete(a.id)));
+      loadData();
+    } catch (error) {
+      console.error("Erro ao excluir registros:", error);
+      alert("Ocorreu um erro ao excluir os registros.");
     }
   };
 
@@ -382,6 +399,11 @@ export default function AbastecimentosPage() {
               <Upload className="w-4 h-4 mr-2" />{isImporting ? 'Importando...' : 'Importar CSV'}
             </Button>
             <Button onClick={handleExport} disabled={isExporting}><Download className="w-4 h-4 mr-2" />{isExporting ? "Exportando..." : "Exportar Tudo"}</Button>
+            {isAdmin && (
+              <Button onClick={handleDeleteAll} disabled={abastecimentos.length === 0} variant="destructive">
+                <Trash2 className="w-4 h-4 mr-2" />Excluir Todos
+              </Button>
+            )}
           </div>
         </motion.div>
 

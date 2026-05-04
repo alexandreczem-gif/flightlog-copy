@@ -5,7 +5,7 @@ import { User } from "@/entities/User"; // Import User entity
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { createPageUrl } from "@/utils"; // Import createPageUrl
@@ -137,6 +137,20 @@ export default function FlightLogs() {
     });
     
     setFilteredLogs(results);
+  };
+
+  const handleDeleteAll = async () => {
+    const first = window.confirm(`Tem certeza que deseja EXCLUIR TODOS os ${logs.length} registros de voo? Esta ação não pode ser desfeita.`);
+    if (!first) return;
+    const second = window.confirm(`CONFIRMAÇÃO FINAL: Todos os ${logs.length} registros serão permanentemente excluídos. Continuar?`);
+    if (!second) return;
+    try {
+      await Promise.all(logs.map(log => FlightLog.delete(log.id)));
+      loadData();
+    } catch (error) {
+      console.error("Erro ao excluir registros:", error);
+      alert("Ocorreu um erro ao excluir os registros.");
+    }
   };
 
   const handleDeleteLog = async (logId) => {
@@ -519,15 +533,23 @@ export default function FlightLogs() {
                   {isExporting ? "Exportando..." : `Exportar Filtrados (${filteredLogs.length})`}
                 </Button>
                 <Button
-                  onClick={handleExportRBE}
-                  disabled={isExporting || filteredLogs.length === 0}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                 onClick={handleExportRBE}
+                 disabled={isExporting || filteredLogs.length === 0}
+                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  {isExporting ? "Exportando..." : `Exportar CSV para RBE`}
+                 <Download className="w-4 h-4 mr-2" />
+                 {isExporting ? "Exportando..." : `Exportar CSV para RBE`}
                 </Button>
-              </>
-            )}
+                <Button
+                 onClick={handleDeleteAll}
+                 disabled={logs.length === 0}
+                 variant="destructive"
+                >
+                 <Trash2 className="w-4 h-4 mr-2" />
+                 Excluir Todos
+                </Button>
+                </>
+                )}
           </div>
         </motion.div>
 
