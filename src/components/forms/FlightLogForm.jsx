@@ -107,7 +107,11 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
     mission_type: initialData?.mission_type || '',
     mission_type_pm: initialData?.mission_type_pm || '',
     pilot_in_command: initialData?.pilot_in_command || '',
+    pilot_2: initialData?.pilot_2 || '',
+    pilot_3: initialData?.pilot_3 || '',
     copilot: initialData?.copilot || '',
+    copilot_2: initialData?.copilot_2 || '',
+    copilot_3: initialData?.copilot_3 || '',
     oat_1: initialData?.oat_1 || '',
     oat_2: initialData?.oat_2 || '',
     oat_3: initialData?.oat_3 || '',
@@ -139,7 +143,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
             origin_lat: initialData[`origin_lat_${i}`] || '',
             origin_lon: initialData[`origin_lon_${i}`] || '',
             destination_lat: initialData[`destination_lat_${i}`] || '',
-            destination_lon: initialData[`destination_lon_${i}`] || ''
+            destination_lon: initialData[`destination_lon_${i}`] || '',
+            crew: initialData[`stage_crew_${i}`] || null // null = todos pre-selecionados
           });
         }
       }
@@ -157,7 +162,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         origin_lat: '',
         origin_lon: '',
         destination_lat: '',
-        destination_lon: ''
+        destination_lon: '',
+        crew: null // null = todos pre-selecionados
       }
     ];
   });
@@ -255,6 +261,36 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
     }
   }, [availableCrew]);
 
+  // Retorna lista de tripulantes registrados no formulário (excluindo vazios)
+  const getCrewList = () => {
+    const crew = [];
+    const addIfFilled = (name, role) => { if (name && name.trim()) crew.push({ name: name.trim(), role }); };
+    addIfFilled(formData.pilot_in_command, 'Comandante');
+    addIfFilled(formData.pilot_2, 'Comandante 2');
+    addIfFilled(formData.pilot_3, 'Comandante 3');
+    addIfFilled(formData.copilot, 'Copiloto');
+    addIfFilled(formData.copilot_2, 'Copiloto 2');
+    addIfFilled(formData.copilot_3, 'Copiloto 3');
+    addIfFilled(formData.oat_1, 'OAT 1');
+    addIfFilled(formData.oat_2, 'OAT 2');
+    addIfFilled(formData.oat_3, 'OAT 3');
+    addIfFilled(formData.osm_1, 'OSM Médico');
+    addIfFilled(formData.osm_2, 'OSM Enfermeiro');
+    return crew;
+  };
+
+  // Quando a tripulação muda, resetar crew das etapas para null (todos pré-selecionados)
+  const crwKey = [
+    formData.pilot_in_command, formData.pilot_2, formData.pilot_3,
+    formData.copilot, formData.copilot_2, formData.copilot_3,
+    formData.oat_1, formData.oat_2, formData.oat_3,
+    formData.osm_1, formData.osm_2
+  ].join('|');
+
+  useEffect(() => {
+    setStages(prev => prev.map(s => ({ ...s, crew: null })));
+  }, [crwKey]);
+
   const handleChange = (field, value) => {
     // Handle aircraft selection with special logic for map/service
     if (field === 'aircraft') {
@@ -270,7 +306,11 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
             aircraft: svc.name,
             base: svc.base,
             pilot_in_command: svc.commander || '',
+            pilot_2: '',
+            pilot_3: '',
             copilot: svc.copilot === '_none_' ? '' : (svc.copilot || ''),
+            copilot_2: '',
+            copilot_3: '',
             oat_1: svc.oat_1 === '_none_' ? '' : (svc.oat_1 || ''),
             oat_2: svc.oat_2 === '_none_' ? '' : (svc.oat_2 || ''),
             oat_3: svc.oat_3 === '_none_' ? '' : (svc.oat_3 || ''),
@@ -322,7 +362,8 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
         origin_lat: lastStage?.destination_lat || '',
         origin_lon: lastStage?.destination_lon || '',
         destination_lat: '',
-        destination_lon: ''
+        destination_lon: '',
+        crew: null
       }]);
     }
   };
@@ -568,6 +609,7 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
       destination: stages[stages.length - 1]?.destination || ''
     };
 
+    const allCrew = getCrewList();
     stages.forEach((stage, index) => {
       const stageNum = index + 1;
       dataToSave[`departure_time_${stageNum}`] = stage.departure_time || '';
@@ -578,6 +620,9 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
       dataToSave[`origin_lon_${stageNum}`] = stage.origin_lon || '';
       dataToSave[`destination_lat_${stageNum}`] = stage.destination_lat || '';
       dataToSave[`destination_lon_${stageNum}`] = stage.destination_lon || '';
+      // crew: null = todos; array = selecionados
+      const stageCrew = stage.crew === null ? allCrew.map(c => c.name) : stage.crew;
+      dataToSave[`stage_crew_${stageNum}`] = stageCrew;
     });
 
     console.log('Dados a serem salvos:', dataToSave);
@@ -785,6 +830,45 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
 
       <Card>
         <CardHeader className="bg-slate-50 border-b">
+          <CardTitle>Tripulação</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Comandantes</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <UserSelect field="pilot_in_command" label="Comandante 1 *" value={formData.pilot_in_command} onChange={v => handleChange('pilot_in_command', v)} userList={userGroups.pilots} required />
+              <UserSelect field="pilot_2" label="Comandante 2" value={formData.pilot_2} onChange={v => handleChange('pilot_2', v)} userList={userGroups.pilots} />
+              <UserSelect field="pilot_3" label="Comandante 3" value={formData.pilot_3} onChange={v => handleChange('pilot_3', v)} userList={userGroups.pilots} />
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Copilotos</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <UserSelect field="copilot" label="Copiloto 1" value={formData.copilot} onChange={v => handleChange('copilot', v)} userList={userGroups.pilots} />
+              <UserSelect field="copilot_2" label="Copiloto 2" value={formData.copilot_2} onChange={v => handleChange('copilot_2', v)} userList={userGroups.pilots} />
+              <UserSelect field="copilot_3" label="Copiloto 3" value={formData.copilot_3} onChange={v => handleChange('copilot_3', v)} userList={userGroups.pilots} />
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">OATs</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <UserSelect field="oat_1" label="OAT 1" value={formData.oat_1} onChange={v => handleChange('oat_1', v)} userList={userGroups.oats} />
+              <UserSelect field="oat_2" label="OAT 2" value={formData.oat_2} onChange={v => handleChange('oat_2', v)} userList={userGroups.oats} />
+              <UserSelect field="oat_3" label="OAT 3" value={formData.oat_3} onChange={v => handleChange('oat_3', v)} userList={userGroups.oats} />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <UserSelect field="osm_1" label="OSM-Médico" value={formData.osm_1} onChange={v => handleChange('osm_1', v)} userList={userGroups.osmMedicos} />
+            <UserSelect field="osm_2" label="OSM-Enfermeiro" value={formData.osm_2} onChange={v => handleChange('osm_2', v)} userList={userGroups.osmEnfermeiros} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="bg-slate-50 border-b">
           <div className="flex justify-between items-center">
             <CardTitle>Etapas de Voo ({activeStages}/6)</CardTitle>
             {activeStages < 6 && (
@@ -817,6 +901,39 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
                   <Input type="time" value={stage.arrival_time} onChange={(e) => handleStageChange(index, 'arrival_time', e.target.value)} required />
                 </div>
               </div>
+
+              {(() => {
+                const crewList = getCrewList();
+                if (crewList.length === 0) return null;
+                // null = todos; array = selecionados
+                const selected = stage.crew === null ? crewList.map(c => c.name) : stage.crew;
+                const toggle = (name) => {
+                  const current = stage.crew === null ? crewList.map(c => c.name) : stage.crew;
+                  const next = current.includes(name) ? current.filter(n => n !== name) : [...current, name];
+                  const newStages = [...stages];
+                  newStages[index] = { ...newStages[index], crew: next };
+                  setStages(newStages);
+                };
+                return (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Tripulantes nesta etapa</p>
+                    <div className="flex flex-wrap gap-3">
+                      {crewList.map(member => (
+                        <label key={member.name} className="flex items-center gap-2 cursor-pointer select-none">
+                          <Checkbox
+                            checked={selected.includes(member.name)}
+                            onCheckedChange={() => toggle(member.name)}
+                          />
+                          <span className="text-sm text-slate-700">
+                            <span className="font-medium">{member.name}</span>
+                            <span className="text-slate-400 text-xs ml-1">({member.role})</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -999,29 +1116,6 @@ export default function FlightLogForm({ initialData, onSave, isSaving, available
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="bg-slate-50 border-b">
-          <CardTitle>Tripulação</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <UserSelect field="pilot_in_command" label="Comandante *" value={formData.pilot_in_command} onChange={v => handleChange('pilot_in_command', v)} userList={userGroups.pilots} required />
-            <UserSelect field="copilot" label="Copiloto" value={formData.copilot} onChange={v => handleChange('copilot', v)} userList={userGroups.pilots} />
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <UserSelect field="oat_1" label="OAT 1" value={formData.oat_1} onChange={v => handleChange('oat_1', v)} userList={userGroups.oats} />
-            <UserSelect field="oat_2" label="OAT 2" value={formData.oat_2} onChange={v => handleChange('oat_2', v)} userList={userGroups.oats} />
-            <UserSelect field="oat_3" label="OAT 3" value={formData.oat_3} onChange={v => handleChange('oat_3', v)} userList={userGroups.oats} />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <UserSelect field="osm_1" label="OSM-Médico" value={formData.osm_1} onChange={v => handleChange('osm_1', v)} userList={userGroups.osmMedicos} />
-            <UserSelect field="osm_2" label="OSM-Enfermeiro" value={formData.osm_2} onChange={v => handleChange('osm_2', v)} userList={userGroups.osmEnfermeiros} />
-          </div>
         </CardContent>
       </Card>
 

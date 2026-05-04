@@ -1,0 +1,493 @@
+{
+  "name": "FlightLog",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do voo"
+    },
+    "mission_id": {
+      "type": "number",
+      "description": "N\u00famero/ID da Miss\u00e3o"
+    },
+    "is_regular_scale": {
+      "type": "boolean",
+      "default": false,
+      "description": "Miss\u00e3o em escala regular de alguma base"
+    },
+    "base": {
+      "type": "string",
+      "description": "Base da aeronave (pr\u00e9-preenchido do servi\u00e7o di\u00e1rio)"
+    },
+    "sade_occurrence_number": {
+      "type": "string",
+      "description": "N\u00famero da ocorr\u00eancia SADE"
+    },
+    "diario_bordo_pagina": {
+      "type": "string",
+      "description": "N\u00famero da p\u00e1gina do Di\u00e1rio de Bordo"
+    },
+    "aircraft": {
+      "type": "string",
+      "enum": [
+        "Arcanjo 01",
+        "Falc\u00e3o 08",
+        "Falc\u00e3o 03",
+        "Falc\u00e3o 04",
+        "Falc\u00e3o 12",
+        "Falc\u00e3o 13",
+        "Falc\u00e3o 14",
+        "Falc\u00e3o 15"
+      ],
+      "description": "Aeronave utilizada"
+    },
+    "municipality": {
+      "type": "string",
+      "description": "Munic\u00edpio da ocorr\u00eancia"
+    },
+    "mission_type": {
+      "type": "string",
+      "enum": [
+        "Remo\u00e7\u00e3o aerom\u00e9dica",
+        "Resgate aerom\u00e9dico",
+        "Busca Terrestre",
+        "Busca Aqu\u00e1tica",
+        "Salvamento Aqu\u00e1tico",
+        "Salvamento Terrestre",
+        "Transporte de \u00d3rg\u00e3os",
+        "Combate a Inc\u00eandio",
+        "Plataforma de observa\u00e7\u00e3o BM",
+        "Transporte de tropa BM",
+        "Opera\u00e7\u00e3o de Defesa Civil",
+        "Ronda Preventiva na Faixa Litor\u00e2nea",
+        "Ocorr\u00eancia Cancelada",
+        "Transporte de Vacinas/Medicamentos",
+        "Transporte de materiais",
+        "Transporte de autoridades",
+        "Apoio a PM",
+        "Apoio a Outros \u00d3rg\u00e3os",
+        "Voo de Manuten\u00e7\u00e3o",
+        "Voo de Treinamento",
+        "Voo de Translado",
+        "Voo de demonstra\u00e7\u00e3o",
+        "Cumprimento de Ordem de Servi\u00e7o"
+      ],
+      "description": "Natureza da miss\u00e3o BM"
+    },
+    "mission_type_pm": {
+      "type": "string",
+      "enum": [
+        "Opera\u00e7\u00f5es Programadas/Eventos",
+        "Busca de Fugitivo(s)/Suspeito(s)",
+        "Roubo",
+        "Roubo a Banco",
+        "Confronto Armado",
+        "Ve\u00edculo Recuperado",
+        "Sequestro de Pessoas",
+        "Plataforma de Observa\u00e7\u00e3o Policial",
+        "Radio Patrulhamento Urbano",
+        "Radio Patrulhamento A\u00e9reo em Fronteira",
+        "Radio Patrulhamento A\u00e9reo Rodovi\u00e1rio",
+        "Fuga/Rebeli\u00e3o em Estabelecimento Prisional",
+        "Escolta",
+        "Cumprimento de Mandando",
+        "Reintegra\u00e7\u00e3o de Posse",
+        "Fiscaliza\u00e7\u00e3o Ambiental",
+        "Fiscaliza\u00e7\u00e3o Ambiental em Apoio ao IAT",
+        "Fiscaliza\u00e7\u00e3o Ambiental em Apoio ao BPMAmb FV",
+        "Fiscaliza\u00e7\u00e3o Ambiental em apoio a Outros \u00d3rg\u00e3os",
+        "Transporte de Autoridade(s)/Dignit\u00e1rio(s)",
+        "Transporte de Material (Armas, Muni\u00e7\u00f5es)",
+        "Transporte de Material (Outros)",
+        "Transporte de Tropa Policial",
+        "Ocorr\u00eancia A\u00e9rea Policial Cancelada",
+        "Ocorr\u00eancias Diversas"
+      ],
+      "description": "Natureza da miss\u00e3o PM"
+    },
+    "origin": {
+      "type": "string",
+      "description": "Local de decolagem inicial (autom\u00e1tico)"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Local de pouso final (autom\u00e1tico)"
+    },
+    "flight_duration": {
+      "type": "number",
+      "description": "Dura\u00e7\u00e3o total do voo (em minutos)"
+    },
+    "departure_time_1": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_1": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_1": {
+      "type": "string"
+    },
+    "destination_1": {
+      "type": "string"
+    },
+    "origin_lat_1": {
+      "type": "string"
+    },
+    "origin_lon_1": {
+      "type": "string"
+    },
+    "destination_lat_1": {
+      "type": "string"
+    },
+    "destination_lon_1": {
+      "type": "string"
+    },
+    "stage_crew_1": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 1"
+    },
+    "departure_time_2": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_2": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_2": {
+      "type": "string"
+    },
+    "destination_2": {
+      "type": "string"
+    },
+    "origin_lat_2": {
+      "type": "string"
+    },
+    "origin_lon_2": {
+      "type": "string"
+    },
+    "destination_lat_2": {
+      "type": "string"
+    },
+    "destination_lon_2": {
+      "type": "string"
+    },
+    "stage_crew_2": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 2"
+    },
+    "departure_time_3": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_3": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_3": {
+      "type": "string"
+    },
+    "destination_3": {
+      "type": "string"
+    },
+    "origin_lat_3": {
+      "type": "string"
+    },
+    "origin_lon_3": {
+      "type": "string"
+    },
+    "destination_lat_3": {
+      "type": "string"
+    },
+    "destination_lon_3": {
+      "type": "string"
+    },
+    "stage_crew_3": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 3"
+    },
+    "departure_time_4": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_4": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_4": {
+      "type": "string"
+    },
+    "destination_4": {
+      "type": "string"
+    },
+    "origin_lat_4": {
+      "type": "string"
+    },
+    "origin_lon_4": {
+      "type": "string"
+    },
+    "destination_lat_4": {
+      "type": "string"
+    },
+    "destination_lon_4": {
+      "type": "string"
+    },
+    "stage_crew_4": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 4"
+    },
+    "departure_time_5": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_5": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_5": {
+      "type": "string"
+    },
+    "destination_5": {
+      "type": "string"
+    },
+    "origin_lat_5": {
+      "type": "string"
+    },
+    "origin_lon_5": {
+      "type": "string"
+    },
+    "destination_lat_5": {
+      "type": "string"
+    },
+    "destination_lon_5": {
+      "type": "string"
+    },
+    "stage_crew_5": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 5"
+    },
+    "departure_time_6": {
+      "type": "string",
+      "format": "time"
+    },
+    "arrival_time_6": {
+      "type": "string",
+      "format": "time"
+    },
+    "origin_6": {
+      "type": "string"
+    },
+    "destination_6": {
+      "type": "string"
+    },
+    "origin_lat_6": {
+      "type": "string"
+    },
+    "origin_lon_6": {
+      "type": "string"
+    },
+    "destination_lat_6": {
+      "type": "string"
+    },
+    "destination_lon_6": {
+      "type": "string"
+    },
+    "stage_crew_6": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tripulantes na etapa 6"
+    },
+    "heli_operations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Opera\u00e7\u00f5es helitransportadas realizadas"
+    },
+    "rescued_victims_count": {
+      "type": "number",
+      "description": "Quantidade de v\u00edtimas resgatadas em opera\u00e7\u00f5es"
+    },
+    "oriented_people_count": {
+      "type": "number",
+      "description": "Quantidade de pessoas orientadas preventivamente"
+    },
+    "helibalde_launches": {
+      "type": "number",
+      "description": "Quantidade de lan\u00e7amentos com helibalde"
+    },
+    "helibalde_load_liters": {
+      "type": "number",
+      "description": "Carga de lan\u00e7amento com helibalde (litros)"
+    },
+    "external_load_time_min": {
+      "type": "number",
+      "description": "Tempo de carga externa ou McGuire (min)"
+    },
+    "external_load_kg": {
+      "type": "number",
+      "description": "Quantidade de carga externa ou McGuire (kg)"
+    },
+    "pilot_in_command": {
+      "type": "string",
+      "description": "Comandante 1 da aeronave"
+    },
+    "pilot_2": {
+      "type": "string",
+      "description": "Comandante 2"
+    },
+    "pilot_3": {
+      "type": "string",
+      "description": "Comandante 3"
+    },
+    "copilot": {
+      "type": "string",
+      "description": "Copiloto 1"
+    },
+    "copilot_2": {
+      "type": "string",
+      "description": "Copiloto 2"
+    },
+    "copilot_3": {
+      "type": "string",
+      "description": "Copiloto 3"
+    },
+    "oat_1": {
+      "type": "string"
+    },
+    "oat_2": {
+      "type": "string"
+    },
+    "oat_3": {
+      "type": "string"
+    },
+    "osm_1": {
+      "type": "string"
+    },
+    "osm_2": {
+      "type": "string"
+    },
+    "crew_members": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pax": {
+      "type": "string",
+      "description": "Passageiros a bordo"
+    },
+    "victims": {
+      "type": "array",
+      "description": "Lista de v\u00edtimas atendidas na miss\u00e3o",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sex": {
+            "type": "string",
+            "enum": [
+              "M",
+              "F",
+              "NA"
+            ]
+          },
+          "age": {
+            "type": "string"
+          },
+          "life_code": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ]
+          },
+          "drowning_grade": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "NA"
+            ],
+            "description": "Grau de Afogamento"
+          },
+          "origin_city": {
+            "type": "string"
+          },
+          "origin_hospital": {
+            "type": "string"
+          },
+          "origin_landing_site": {
+            "type": "string"
+          },
+          "destination_city": {
+            "type": "string"
+          },
+          "destination_hospital": {
+            "type": "string"
+          },
+          "destination_landing_site": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "remarks": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es e detalhes da miss\u00e3o"
+    }
+  },
+  "required": [
+    "date",
+    "mission_id",
+    "aircraft",
+    "pilot_in_command",
+    "flight_duration",
+    "origin_1",
+    "destination_1",
+    "departure_time_1",
+    "arrival_time_1"
+  ],
+  "rls": {
+    "read": {},
+    "write": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "created_by": "{{user.email}}"
+        }
+      ]
+    }
+  }
+}
