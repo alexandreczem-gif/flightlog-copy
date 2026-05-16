@@ -13,6 +13,57 @@ import { createPageUrl } from "@/utils"; // Import createPageUrl
 import FlightLogTable from "../components/data/FlightLogTable";
 import AdvancedFilters from "../components/data/AdvancedFilters"; // Import AdvancedFilters component
 
+// Robust CSV parser: parses a single line respecting quoted fields with escaped quotes
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// Parses all CSV rows from a multi-line string (handles quoted newlines)
+function parseCSVRows(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+        current += ch;
+      }
+    } else if (ch === '\n' && !inQuotes) {
+      if (current.trim()) rows.push(parseCSVLine(current));
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) rows.push(parseCSVLine(current));
+  return rows;
+}
+
 export default function FlightLogs() {
   const [logs, setLogs] = useState([]);
   const [victimRecords, setVictimRecords] = useState([]); // New state for victim records
@@ -369,30 +420,20 @@ export default function FlightLogs() {
         if (lines.length < 2) return;
 
         // Strip BOM and quotes from headers
-        const headers = lines[0].replace(/^\uFEFF/, '').split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const rawHeaderLine = lines[0].replace(/^\uFEFF/, '');
+        const headers = parseCSVLine(rawHeaderLine).map(h => h.trim());
         const dataToImport = [];
 
         // Fields to skip on import (system/read-only fields)
         const SKIP_FIELDS = new Set(['id', 'created_by', 'created_by_id', 'created_date', 'updated_date', 'is_sample']);
 
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          
-          const rowValues = [];
-          let currentVal = '';
-          let inQuotes = false;
-          
-          for (let char of lines[i]) {
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-              rowValues.push(currentVal.replace(/^"|"$/g, ''));
-              currentVal = '';
-            } else {
-              currentVal += char;
-            }
-          }
-          rowValues.push(currentVal.replace(/^"|"$/g, ''));
+        // Join all lines back and re-split properly to handle multi-line quoted fields
+        const fullText = lines.slice(1).join('\n');
+        const dataRows = parseCSVRows(fullText);
+
+        for (let i = 0; i < dataRows.length; i++) {
+          const rowValues = dataRows[i];
+          if (rowValues.length === 0) continue;
 
           const row = {};
           headers.forEach((h, idx) => {
@@ -410,6 +451,19 @@ export default function FlightLogs() {
         const parsedData = dataToImport.map(row => {
           const newRow = { ...row };
           
+          // Handle stage_crew arrays
+          ['stage_crew_1','stage_crew_2','stage_crew_3','stage_crew_4','stage_crew_5','stage_crew_6'].forEach(field => {
+            if (!newRow[field] || newRow[field] === '') {
+              newRow[field] = [];
+            } else if (typeof newRow[field] === 'string') {
+              if (newRow[field].trim().startsWith('[')) {
+                try { newRow[field] = JSON.parse(newRow[field]); } catch (e) { newRow[field] = []; }
+              } else {
+                newRow[field] = newRow[field].split(';').map(s => s.trim()).filter(Boolean);
+              }
+            }
+          });
+
           // Handle array/object fields
           ['heli_operations', 'crew_members'].forEach(field => {
             if (!newRow[field]) {
